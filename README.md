@@ -1,5 +1,7 @@
 # 🐾 PetBuddy App
 
+🔗 **Live Preview:** [https://petbuddy-app-nine.vercel.app](https://petbuddy-app-nine.vercel.app)
+
 **PetBuddy** is a modern, mobile-first pet care companion app built as a single-page application. It brings together pet management, veterinary services, shopping, community, and animal rescue — all in one beautiful interface.
 
 ---
