@@ -11,8 +11,11 @@ import {
     Loader2,
     Trash2,
     AlertTriangle,
+    Weight,
+    Stethoscope,
+    X,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useSection } from "@/context/SectionContext";
 import { PawToggle } from "@/components/ui/PawToggle";
@@ -20,6 +23,8 @@ import { usePets } from "@/hooks/useData";
 import { AddPetModal } from "@/components/pets/AddPetModal";
 import { EditPetModal } from "@/components/pets/EditPetModal";
 import { PetHealthChat } from "@/components/pets/PetHealthChat";
+import { AddHealthRecordModal } from "@/components/pets/AddHealthRecordModal";
+import { api } from "@/lib/api-client";
 
 function getAge(dob: string): string {
     const birth = new Date(dob);
@@ -39,6 +44,23 @@ const healthColors: Record<string, string> = {
     unknown: "bg-gray-500",
 };
 
+interface HealthRecord {
+    _id: string;
+    petId: string;
+    type: "vaccination" | "weight" | "treatment";
+    date: string;
+    notes: string;
+    documentUrl: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+const RECORD_TYPE_CONFIG = {
+    vaccination: { icon: Syringe, color: "bg-blue-500", label: "Vaccination" },
+    weight: { icon: Weight, color: "bg-purple-500", label: "Weight" },
+    treatment: { icon: Stethoscope, color: "bg-emerald-500", label: "Treatment" },
+};
+
 export function PetsSection() {
     const { setActiveSection } = useSection();
     const { pets, isLoading, refetch } = usePets();
@@ -49,9 +71,46 @@ export function PetsSection() {
     const [showEditPet, setShowEditPet] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showAddHealthRecord, setShowAddHealthRecord] = useState(false);
+    const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
+    const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+    const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
 
     const pet = pets[selectedIndex] || null;
     const petAge = useMemo(() => (pet ? getAge(pet.dob) : ""), [pet]);
+
+    // Fetch health records when pet changes
+    const fetchHealthRecords = useCallback(async () => {
+        if (!pet?._id) return;
+        setIsLoadingRecords(true);
+        try {
+            const data = await api.get<{ records: HealthRecord[] }>(
+                `/pets/${pet._id}/health-records?limit=50`
+            );
+            setHealthRecords(data.records || []);
+        } catch (err) {
+            console.error("Failed to fetch health records:", err);
+            setHealthRecords([]);
+        } finally {
+            setIsLoadingRecords(false);
+        }
+    }, [pet?._id]);
+
+    useEffect(() => {
+        fetchHealthRecords();
+    }, [fetchHealthRecords]);
+
+    const handleDeleteRecord = async (recordId: string) => {
+        setDeletingRecordId(recordId);
+        try {
+            await api.delete(`/health-record/${recordId}`);
+            setHealthRecords((prev) => prev.filter((r) => r._id !== recordId));
+        } catch (err) {
+            console.error("Failed to delete health record:", err);
+        } finally {
+            setDeletingRecordId(null);
+        }
+    };
 
     const handleEditSuccess = () => {
         refetch();
@@ -172,20 +231,17 @@ export function PetsSection() {
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-bold text-gray-900">Health Tracking</h3>
-                                <button className="text-[#F05359] text-sm font-semibold flex items-center gap-1">
+                                <button
+                                    onClick={() => setShowAddHealthRecord(true)}
+                                    className="text-[#F05359] text-sm font-semibold flex items-center gap-1 hover:bg-red-50 px-3 py-1.5 rounded-full transition-colors active:scale-95"
+                                >
                                     <Plus className="w-4 h-4" />
                                     Add Record
                                 </button>
                             </div>
 
-                            <div className="bg-gray-50/50 rounded-3xl p-4 space-y-4 border border-gray-100 bubble-card">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0" />
-                                    <div>
-                                        <p className="font-bold text-gray-900 text-sm">Last Vaccination</p>
-                                        <p className="text-xs text-gray-500">10 June, 2023 • Rabies &amp; DHPP</p>
-                                    </div>
-                                </div>
+                            <div className="bg-gray-50/50 rounded-3xl p-4 space-y-3 border border-gray-100 bubble-card">
+                                {/* Always show current weight from pet profile */}
                                 <div className="flex items-start gap-3">
                                     <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 shrink-0" />
                                     <div>
@@ -193,6 +249,57 @@ export function PetsSection() {
                                         <p className="text-xs text-gray-500">{pet.weight}kg</p>
                                     </div>
                                 </div>
+
+                                {/* Divider */}
+                                {healthRecords.length > 0 && (
+                                    <div className="border-t border-gray-100" />
+                                )}
+
+                                {/* Dynamic health records */}
+                                {isLoadingRecords ? (
+                                    <div className="flex items-center justify-center py-4">
+                                        <Loader2 className="w-5 h-5 text-[#F05359] animate-spin" />
+                                    </div>
+                                ) : healthRecords.length === 0 ? (
+                                    <div className="text-center py-4">
+                                        <p className="text-xs text-gray-400">No health records yet. Tap &quot;+ Add Record&quot; to get started.</p>
+                                    </div>
+                                ) : (
+                                    healthRecords.map((record) => {
+                                        const config = RECORD_TYPE_CONFIG[record.type];
+                                        const recordDate = new Date(record.date).toLocaleDateString("en-US", {
+                                            day: "numeric",
+                                            month: "long",
+                                            year: "numeric",
+                                        });
+                                        return (
+                                            <div
+                                                key={record._id}
+                                                className="group flex items-start gap-3 relative"
+                                            >
+                                                <div className={cn("w-2 h-2 rounded-full mt-2 shrink-0", config.color)} />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-gray-900 text-sm">{config.label}</p>
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                        {recordDate}{record.notes ? ` • ${record.notes}` : ""}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteRecord(record._id)}
+                                                    disabled={deletingRecordId === record._id}
+                                                    className="opacity-0 group-hover:opacity-100 shrink-0 w-7 h-7 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 transition-all active:scale-90"
+                                                    title="Delete record"
+                                                >
+                                                    {deletingRecordId === record._id ? (
+                                                        <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+                                                    ) : (
+                                                        <X className="w-3.5 h-3.5 text-red-500" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
@@ -306,6 +413,17 @@ export function PetsSection() {
                     pet={pet}
                     onClose={() => setShowEditPet(false)}
                     onSuccess={handleEditSuccess}
+                />
+            )}
+
+            {/* Add Health Record Modal */}
+            {pet && (
+                <AddHealthRecordModal
+                    open={showAddHealthRecord}
+                    petId={pet._id}
+                    petName={pet.name}
+                    onClose={() => setShowAddHealthRecord(false)}
+                    onSuccess={fetchHealthRecords}
                 />
             )}
         </>

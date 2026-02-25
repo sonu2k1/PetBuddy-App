@@ -6,7 +6,7 @@
  * 2. AI toxicity check via Gemini (async, for borderline content)
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { logger } from '@/server/utils/logger';
 
 // ═════════════════════════════════════════════════════
@@ -78,21 +78,24 @@ export const checkToxicity = async (
 ): Promise<{ score: number; reason: string }> => {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
-        const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const modelName = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 
         if (!apiKey) {
             logger.warn('GEMINI_API_KEY not set — skipping AI toxicity check');
             return { score: 0, reason: '' };
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const ai = new GoogleGenAI({ apiKey });
 
-        const result = await model.generateContent(TOXICITY_PROMPT + text);
-        const response = result.response.text().trim();
+        const result = await ai.models.generateContent({
+            model: modelName,
+            contents: TOXICITY_PROMPT + text,
+        });
+
+        const responseText = result.text?.trim() || '';
 
         // Parse JSON response
-        const cleaned = response.replace(/```json\n?|```\n?/g, '').trim();
+        const cleaned = responseText.replace(/```json\n?|```\n?/g, '').trim();
         const parsed = JSON.parse(cleaned);
 
         return {

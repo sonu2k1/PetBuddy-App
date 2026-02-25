@@ -6,6 +6,7 @@ export const POST_CATEGORIES = [
     'tips',
     'health',
     'adoption',
+    'rescue',
     'lost-found',
     'funny',
     'question',

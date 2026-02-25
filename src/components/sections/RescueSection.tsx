@@ -239,6 +239,75 @@ export function RescueSection() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
 
+    // ─── Location state ──────────────────────────────────
+    const [locationName, setLocationName] = useState<string | null>(null);       // Short: "MG Road, Koramangala"
+    const [locationFullAddress, setLocationFullAddress] = useState<string | null>(null); // Full Nominatim display_name
+    const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [locationError, setLocationError] = useState<string | null>(null);
+
+    const fetchLocation = useCallback(async () => {
+        if (!navigator.geolocation) {
+            setLocationError("Geolocation not supported");
+            return;
+        }
+
+        setIsLoadingLocation(true);
+        setLocationError(null);
+
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 60000,
+                });
+            });
+
+            const { latitude, longitude } = position.coords;
+            setLocationCoords({ lat: latitude, lng: longitude });
+
+            // Reverse geocode via our server-side proxy (avoids CORS)
+            try {
+                const res = await fetch(
+                    `/api/v1/geocode/reverse?lat=${latitude}&lon=${longitude}`
+                );
+                const data = await res.json();
+                const addr = data.address;
+
+                // Build a short primary name
+                const shortParts = [
+                    addr?.road || addr?.pedestrian || addr?.hamlet || "",
+                    addr?.suburb || addr?.neighbourhood || addr?.village || addr?.town || "",
+                    addr?.city || addr?.county || "",
+                ].filter(Boolean);
+                setLocationName(shortParts.length > 0 ? shortParts.slice(0, 2).join(", ") : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+
+                // Use Nominatim's full display_name for the proper address
+                setLocationFullAddress(data.display_name || shortParts.join(", "));
+            } catch {
+                setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                setLocationFullAddress(null);
+            }
+        } catch (err: unknown) {
+            const geoErr = err as GeolocationPositionError;
+            if (geoErr.code === 1) {
+                setLocationError("Permission denied — tap to retry");
+            } else if (geoErr.code === 2) {
+                setLocationError("Location unavailable — tap to retry");
+            } else {
+                setLocationError("Timed out — tap to retry");
+            }
+        } finally {
+            setIsLoadingLocation(false);
+        }
+    }, []);
+
+    // Auto-detect location on mount
+    useEffect(() => {
+        fetchLocation();
+    }, [fetchLocation]);
+
     // ─── Camera / Photo state ────────────────────────────
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -308,9 +377,9 @@ export function RescueSection() {
             // Step 2: Create the rescue report
             await api.post("/rescue/report", {
                 description: description.trim(),
-                address: "Auto-detected location",
-                longitude: 80.35,
-                latitude: 26.45,
+                address: locationFullAddress || locationName || "Location not available",
+                longitude: locationCoords?.lng ?? 0,
+                latitude: locationCoords?.lat ?? 0,
                 ...(photoUrl ? { photo: photoUrl } : {}),
             });
             setDescription("");
@@ -374,16 +443,96 @@ export function RescueSection() {
                 {/* Auto-location */}
                 <div className="mb-4">
                     <label className="text-xs text-gray-500 font-medium mb-2 block">Auto-location</label>
-                    <div className="bg-white border border-gray-100 rounded-3xl p-4 flex items-center justify-between bubble-card">
-                        <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-900">Kanpur Cantt</span>
+                    <button
+                        type="button"
+                        onClick={fetchLocation}
+                        disabled={isLoadingLocation}
+                        className="w-full bg-white border border-gray-100 rounded-3xl p-4 bubble-card text-left"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                {isLoadingLocation ? (
+                                    <div className="w-9 h-9 bg-yellow-50 rounded-full flex items-center justify-center shrink-0">
+                                        <Loader2 className="w-4 h-4 text-[#F05359] animate-spin" />
+                                    </div>
+                                ) : locationError ? (
+                                    <div className="w-9 h-9 bg-red-50 rounded-full flex items-center justify-center shrink-0">
+                                        <MapPin className="w-4 h-4 text-red-400" />
+                                    </div>
+                                ) : (
+                                    <div className="w-9 h-9 bg-green-50 rounded-full flex items-center justify-center shrink-0">
+                                        <MapPin className="w-4 h-4 text-green-500" />
+                                    </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                    <p className={`text-sm font-bold truncate ${isLoadingLocation
+                                        ? "text-gray-400"
+                                        : locationError
+                                            ? "text-red-500"
+                                            : "text-gray-900"
+                                        }`}>
+                                        {isLoadingLocation
+                                            ? "Detecting your location..."
+                                            : locationError
+                                                ? locationError
+                                                : locationName || "Tap to detect location"}
+                                    </p>
+                                    {locationFullAddress && !isLoadingLocation && !locationError && (
+                                        <p className="text-[11px] text-gray-400 mt-0.5 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {locationFullAddress}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {isLoadingLocation ? (
+                                <span className="bg-yellow-100 text-yellow-600 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ml-2">
+                                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                                    DETECTING
+                                </span>
+                            ) : locationError ? (
+                                <span className="bg-red-100 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ml-2">
+                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                                    RETRY
+                                </span>
+                            ) : locationName ? (
+                                <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ml-2">
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                                    ACTIVE
+                                </span>
+                            ) : (
+                                <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ml-2">
+                                    <MapPin className="w-3 h-3" />
+                                    DETECT
+                                </span>
+                            )}
                         </div>
-                        <span className="bg-green-100 text-green-600 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                            ACTIVE
-                        </span>
-                    </div>
+                    </button>
+
+                    {/* Interactive Map */}
+                    {locationCoords && !isLoadingLocation && !locationError && (
+                        <div className="mt-3 rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                            <iframe
+                                title="Rescue Location Map"
+                                width="100%"
+                                height="180"
+                                style={{ border: 0, display: 'block' }}
+                                loading="lazy"
+                                src={`https://www.openstreetmap.org/export/embed.html?bbox=${locationCoords.lng - 0.005}%2C${locationCoords.lat - 0.003}%2C${locationCoords.lng + 0.005}%2C${locationCoords.lat + 0.003}&layer=mapnik&marker=${locationCoords.lat}%2C${locationCoords.lng}`}
+                            />
+                            <div className="bg-white px-3 py-2 flex items-center justify-between">
+                                <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                    📍 {locationCoords.lat.toFixed(5)}, {locationCoords.lng.toFixed(5)}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); fetchLocation(); }}
+                                    className="text-[10px] text-[#F05359] font-bold hover:underline"
+                                >
+                                    Refresh Location
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Evidence Photo */}

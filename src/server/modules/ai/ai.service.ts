@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, Content } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import Pet from '../pet/pet.model';
 import PetChatHistory from './ai.model';
 import { PetAdviceInput } from './ai.schema';
@@ -15,17 +15,40 @@ const AI_RATE_LIMIT_WINDOW = 3600;   // 1 hour
 const AI_RATE_LIMIT_MAX = 30;        // Max requests per hour per user
 const AI_RATE_LIMIT_KEY = (userId: string) => `ai:ratelimit:${userId}`;
 const MAX_CONTEXT_HISTORY = 5;       // Recent chats to include for context
+const GEMINI_MAX_RETRIES = 3;        // Max retries for Gemini API calls
+const GEMINI_INITIAL_DELAY_MS = 1000; // Initial delay for exponential backoff
+
+// ─── Retry helper ────────────────────────────────────
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const callGeminiWithRetry = async <T>(fn: () => Promise<T>): Promise<T> => {
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < GEMINI_MAX_RETRIES; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            const msg = lastError.message;
+            const isRetryable = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('retry');
+            if (!isRetryable) throw lastError;
+            const delay = GEMINI_INITIAL_DELAY_MS * Math.pow(2, attempt);
+            logger.warn(`Gemini API rate-limited (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES}), retrying in ${delay}ms...`);
+            await sleep(delay);
+        }
+    }
+    throw lastError!;
+};
 
 // ─── Gemini Client (lazy singleton) ──────────────────
-let geminiClient: GoogleGenerativeAI | null = null;
+let geminiClient: GoogleGenAI | null = null;
 
-const getGemini = (): GoogleGenerativeAI => {
+const getGemini = (): GoogleGenAI => {
     if (!geminiClient) {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
             throw new BadRequestError('Gemini API key is not configured');
         }
-        geminiClient = new GoogleGenerativeAI(apiKey);
+        geminiClient = new GoogleGenAI({ apiKey });
     }
     return geminiClient;
 };
@@ -125,17 +148,15 @@ export const getPetAdvice = async (
         .limit(MAX_CONTEXT_HISTORY)
         .lean();
 
-    // Build Gemini-compatible history (oldest first)
-    const chatHistory: Content[] = recentChats
+    // Build conversation history for context (oldest first)
+    const historyParts = recentChats
         .reverse()
-        .flatMap((chat) => [
-            { role: 'user' as const, parts: [{ text: chat.question }] },
-            { role: 'model' as const, parts: [{ text: chat.answer }] },
-        ]);
+        .map((chat) => `User: ${chat.question}\nAssistant: ${chat.answer}`)
+        .join('\n\n');
 
     // ── Call Gemini ────────────────────────────────────
-    const gemini = getGemini();
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const ai = getGemini();
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 
     const systemPrompt = buildSystemPrompt({
         name: pet.name,
@@ -147,37 +168,45 @@ export const getPetAdvice = async (
         isLostMode: pet.isLostMode,
     });
 
+    // Build the full prompt with context
+    const fullPrompt = historyParts
+        ? `${systemPrompt}\n\nPrevious conversation:\n${historyParts}\n\nNew question: ${question}`
+        : `${systemPrompt}\n\nQuestion: ${question}`;
+
     let answer: string;
 
     try {
-        const model = gemini.getGenerativeModel({
-            model: modelName,
-            systemInstruction: systemPrompt,
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 800,
-            },
+        answer = await callGeminiWithRetry(async () => {
+            const response = await ai.models.generateContent({
+                model: modelName,
+                contents: fullPrompt,
+                config: {
+                    temperature: 0.7,
+                    maxOutputTokens: 800,
+                },
+            });
+
+            return response.text?.trim() || 'I was unable to generate a response. Please try again.';
         });
-
-        const chat = model.startChat({ history: chatHistory });
-        const result = await chat.sendMessage(question);
-        const response = result.response;
-
-        answer = response.text().trim() || 'I was unable to generate a response. Please try again.';
     } catch (error) {
         logger.error('Gemini API error:', error);
 
-        // Detect rate-limit / quota errors from Gemini
+        // Detect rate-limit / quota errors from Gemini — provide a fallback instead of failing
         const errMsg = error instanceof Error ? error.message : '';
         if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('retry')) {
+            logger.warn('Gemini quota exhausted after retries — returning fallback response');
+            answer = `I'm currently experiencing high demand and can't process your question right now. Here are some general tips for ${pet.name}:\n\n` +
+                `🐾 **General Care Tips for ${pet.breed}:**\n` +
+                `- Ensure ${pet.name} has fresh water available at all times\n` +
+                `- Maintain regular feeding schedules appropriate for a ${calculateAge(pet.dob)} old ${pet.breed}\n` +
+                `- Keep up with regular vet check-ups\n` +
+                `- Ensure adequate exercise and mental stimulation\n\n` +
+                `Please try asking me again in a few minutes, and I'll be happy to give you personalized advice! 🐶`;
+        } else {
             throw new BadRequestError(
-                'Gemini API quota exceeded. Please wait a few seconds and try again.',
+                'AI service is temporarily unavailable. Please try again later.',
             );
         }
-
-        throw new BadRequestError(
-            'AI service is temporarily unavailable. Please try again later.',
-        );
     }
 
     // ── Store chat history ─────────────────────────────
