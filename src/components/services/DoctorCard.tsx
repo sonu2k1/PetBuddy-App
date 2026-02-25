@@ -21,7 +21,7 @@ export function DoctorCard({
     nextAvailable,
 }: DoctorCardProps) {
     return (
-        <div className="bg-white rounded-[24px] p-4 shadow-soft border border-gray-50 mb-4">
+        <div className="bg-white rounded-[24px] p-4 border border-gray-50 mb-4 bubble-card">
             <div className="flex gap-4 mb-4">
                 {/* Avatar Area */}
                 <div className="relative shrink-0">

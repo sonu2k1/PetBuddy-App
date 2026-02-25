@@ -129,12 +129,12 @@ export function NotificationsSection() {
             </div>
 
             {/* Notifications List */}
-            <main className="px-4 py-4 pb-32 space-y-3">
+            <main className="px-4 py-4 pb-32 space-y-3 paw-bg">
                 {NOTIFICATIONS.map((notif) => (
                     <div
                         key={notif.id}
                         className={cn(
-                            "bg-white rounded-2xl p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md",
+                            "bg-white rounded-3xl p-4 border border-gray-100 transition-all bubble-card",
                             notif.accentBorder
                         )}
                     >

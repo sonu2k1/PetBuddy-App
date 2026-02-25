@@ -2,6 +2,7 @@
 
 import { MobileContainer } from "@/components/layout/MobileContainer";
 import { SectionProvider, useSection } from "@/context/SectionContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { HomeSection } from "@/components/sections/HomeSection";
 import { ServicesSection } from "@/components/sections/ServicesSection";
 import { ShopSection } from "@/components/sections/ShopSection";
@@ -14,6 +15,7 @@ import { StoreSection } from "@/components/sections/StoreSection";
 import { BookingSection } from "@/components/sections/BookingSection";
 import { ProductSection } from "@/components/sections/ProductSection";
 import { NotificationsSection } from "@/components/sections/NotificationsSection";
+import { LoginScreen } from "@/components/auth/LoginScreen";
 
 function SectionRenderer() {
   const { activeSection } = useSection();
@@ -48,12 +50,43 @@ function SectionRenderer() {
   }
 }
 
-export default function Home() {
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <MobileContainer hideNav>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-3 border-[#F05359] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-400 font-medium">Loading...</p>
+          </div>
+        </div>
+      </MobileContainer>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <MobileContainer hideNav>
+        <LoginScreen />
+      </MobileContainer>
+    );
+  }
+
   return (
     <SectionProvider>
       <MobileContainer>
         <SectionRenderer />
       </MobileContainer>
     </SectionProvider>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

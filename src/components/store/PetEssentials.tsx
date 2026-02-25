@@ -29,32 +29,32 @@ export function PetEssentials() {
 
             <div className="grid grid-cols-2 gap-3">
                 {products.map((product) => (
-                    <div key={product.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                    <div key={product.id} className="bg-white border border-gray-100/50 bubble-card overflow-hidden">
                         {/* Image Container */}
-                        <div className="relative aspect-square bg-gray-50 p-3">
+                        <div className="relative aspect-square bg-gray-50/50 p-3">
                             {/* Discount Badge */}
-                            <span className="absolute top-2 left-2 bg-[#F05359] text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
+                            <span className="absolute top-2 left-2 bg-[#F05359] text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm shadow-red-200">
                                 {product.discount}
                             </span>
                             <img
                                 src={product.image}
                                 alt={product.name}
-                                className="w-full h-full object-contain rounded-xl"
+                                className="w-full h-full object-contain mix-blend-multiply"
                             />
                         </div>
 
                         {/* Info */}
                         <div className="p-3 pt-2">
-                            <p className="text-[11px] text-gray-500 font-medium">{product.brand}</p>
-                            <h3 className="text-sm font-bold text-gray-900 leading-tight line-clamp-2 min-h-[2.5em]">
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{product.brand}</p>
+                            <h3 className="text-sm font-bold text-gray-900 leading-tight line-clamp-2 min-h-[2.5em] mt-0.5">
                                 {product.name}
                             </h3>
-                            <div className="flex items-center justify-between mt-2">
-                                <div>
-                                    <span className="text-base font-bold text-[#F05359]">₹{product.price}</span>
-                                    <span className="text-xs text-gray-400 line-through ml-1">₹{product.originalPrice}</span>
+                            <div className="flex items-center justify-between mt-3">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-black text-gray-900">₹{product.price}</span>
+                                    <span className="text-[10px] text-gray-400 line-through">₹{product.originalPrice}</span>
                                 </div>
-                                <button className="text-[#F05359] text-xs font-bold border border-[#F05359] px-3 py-1 rounded-lg hover:bg-[#F05359] hover:text-white transition-colors">
+                                <button className="bg-[#F05359] text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-red-100 active:scale-95 transition-all">
                                     ADD
                                 </button>
                             </div>

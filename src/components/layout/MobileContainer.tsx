@@ -4,22 +4,26 @@ import { BottomNav } from "@/components/layout/BottomNav";
 interface MobileContainerProps {
     children: React.ReactNode;
     className?: string;
+    hideNav?: boolean;
 }
 
-export function MobileContainer({ children, className }: MobileContainerProps) {
+export function MobileContainer({ children, className, hideNav }: MobileContainerProps) {
     return (
         <div className="min-h-screen bg-gray-100 flex justify-center">
             {/* Mobile View */}
             <div
                 className={cn(
-                    "w-full max-w-[430px] bg-white min-h-screen relative shadow-2xl overflow-x-hidden md:hidden pb-[80px]", // Added padding-bottom to prevent content hidden behind nav
+                    "w-full max-w-[430px] bg-white min-h-screen relative shadow-2xl overflow-x-hidden md:hidden paw-bg-light",
+                    !hideNav && "pb-[80px]",
                     className
                 )}
             >
                 {children}
-                <div className="fixed bottom-0 w-full max-w-[430px] z-50">
-                    <BottomNav />
-                </div>
+                {!hideNav && (
+                    <div className="fixed bottom-0 w-full max-w-[430px] z-50">
+                        <BottomNav />
+                    </div>
+                )}
             </div>
 
             {/* Desktop Warning - Visible only on md screens and up */}

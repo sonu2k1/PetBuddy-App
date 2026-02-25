@@ -1,83 +1,87 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Filter, ShoppingCart } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, Filter, ShoppingCart, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSection } from "@/context/SectionContext";
+import { useProducts, useCart, api, type Product } from "@/hooks/useData";
 
 const CATEGORIES = ["All Pets", "Dogs", "Cats", "Birds", "Small Pets"];
 const SUB_CATEGORIES = ["All", "Food", "Grooming", "Toys", "Health", "Gear"];
 
-const PRODUCTS = [
+const FALLBACK_PRODUCTS: Product[] = [
     {
-        id: 1,
+        _id: '1',
         name: "Premium Adult Dry Dog Food - Chicken",
-        brand: "BARKLEY & CO",
-        rating: 4.8,
+        category: "food",
         price: 45.99,
-        originalPrice: 52.00,
-        discount: "12% OFF",
-        image: "https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=150&h=150&fit=crop",
-        eta: "Today, 30m"
+        discount: 12,
+        stock: 50,
+        deliveryTime: "Today, 30m",
+        images: ["https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=150&h=150&fit=crop"],
+        description: "High-quality adult dog food",
+        isActive: true,
     },
     {
-        id: 2,
+        _id: '2',
         name: "Interactive Feather Wand Cat Toy",
-        brand: "MEOWMIXER",
-        rating: 4.9,
+        category: "toys",
         price: 12.50,
-        originalPrice: null,
-        image: "https://images.unsplash.com/photo-1615266895738-11f1371cd7e5?w=150&h=150&fit=crop",
-        eta: "Today, 45m"
+        discount: 0,
+        stock: 100,
+        deliveryTime: "Today, 45m",
+        images: ["https://images.unsplash.com/photo-1615266895738-11f1371cd7e5?w=150&h=150&fit=crop"],
+        description: "Fun interactive cat toy",
+        isActive: true,
     },
     {
-        id: 3,
+        _id: '3',
         name: "Hypoallergenic Puppy Shampoo",
-        brand: "PETPURITY",
-        rating: 4.7,
+        category: "grooming",
         price: 18.00,
-        originalPrice: 24.00,
-        discount: "25% OFF",
-        image: "https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=150&h=150&fit=crop",
-        eta: "Tomorrow"
+        discount: 25,
+        stock: 30,
+        deliveryTime: "Tomorrow",
+        images: ["https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=150&h=150&fit=crop"],
+        description: "Gentle shampoo for puppies",
+        isActive: true,
     },
     {
-        id: 4,
-        name: "Ultra-Soft Orthopedic Memory Foam Bed",
-        brand: "CLOUDNINE",
-        rating: 5.0,
+        _id: '4',
+        name: "Ultra-Soft Orthopedic Bed",
+        category: "gear",
         price: 89.99,
-        originalPrice: null,
-        image: "https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=150&h=150&fit=crop",
-        eta: "Today, 1h"
+        discount: 0,
+        stock: 15,
+        deliveryTime: "Today, 1h",
+        images: ["https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=150&h=150&fit=crop"],
+        description: "Memory foam pet bed",
+        isActive: true,
     },
-    {
-        id: 5,
-        name: "Wild Salmon Bites Grain-Free Treats",
-        brand: "OCEANBOUNTY",
-        rating: 4.6,
-        price: 9.99,
-        originalPrice: 12.99,
-        discount: "SAVE $3",
-        image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=150&h=150&fit=crop",
-        eta: "Today, 25m"
-    },
-    {
-        id: 6,
-        name: "Adjustable Safety Harness - Ocean Blue",
-        brand: "SWIFTPAW",
-        rating: 4.8,
-        price: 22.50,
-        originalPrice: null,
-        image: "https://images.unsplash.com/photo-1551848576-9d332945fc00?w=150&h=150&fit=crop",
-        eta: "Today, 40m"
-    }
 ];
 
 export function ShopSection() {
     const [activeCategory, setActiveCategory] = useState("All Pets");
     const [activeSubCategory, setActiveSubCategory] = useState("All");
     const { setActiveSection } = useSection();
+    const { products: apiProducts, isLoading } = useProducts();
+    const { cart } = useCart();
+
+    const products = apiProducts.length > 0 ? apiProducts : FALLBACK_PRODUCTS;
+    const cartCount = cart?.items?.length || 0;
+
+    const filteredProducts = useMemo(() => {
+        if (activeSubCategory === "All") return products;
+        return products.filter(p => p.category.toLowerCase() === activeSubCategory.toLowerCase());
+    }, [products, activeSubCategory]);
+
+    const handleAddToCart = async (productId: string) => {
+        try {
+            await api.post("/cart", { productId, quantity: 1 });
+        } catch {
+            // silently fail for now
+        }
+    };
 
     return (
         <>
@@ -93,7 +97,9 @@ export function ShopSection() {
                     <div className="flex-1 flex justify-end relative">
                         <button onClick={() => setActiveSection("cart")}>
                             <ShoppingCart className="w-6 h-6 text-gray-800" />
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white">2</span>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white">{cartCount}</span>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -154,11 +160,11 @@ export function ShopSection() {
             </div>
 
             {/* Product Grid */}
-            <main className="px-4 py-4 pb-32 bg-gray-50/50 min-h-screen">
+            <main className="px-4 py-4 pb-32 bg-gray-50/50 min-h-screen paw-bg">
                 <div className="flex justify-between items-center mb-4">
                     <div>
                         <h2 className="font-bold text-gray-900 text-base">Best Sellers</h2>
-                        <p className="text-[10px] text-gray-500">Showing 6 items</p>
+                        <p className="text-[10px] text-gray-500">Showing {filteredProducts.length} items</p>
                     </div>
                     <button className="bg-white px-3 py-1.5 rounded-lg border border-gray-100 text-[10px] font-bold text-gray-600 flex items-center gap-1">
                         Most Popular
@@ -166,53 +172,55 @@ export function ShopSection() {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    {PRODUCTS.map(product => (
-                        <div key={product.id} className="bg-white p-3 rounded-3xl shadow-soft group">
-                            <div className="relative aspect-square rounded-2xl bg-gray-100 mb-3 overflow-hidden">
-                                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                <button className="absolute top-2 right-2 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
-                                    <div className="w-4 h-4"><ShoppingCart className="w-3.5 h-3.5" /></div>
-                                </button>
-                                {product.discount && (
-                                    <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                        {product.discount}
-                                    </div>
-                                )}
-                            </div>
-
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{product.brand}</p>
-                            <h3 className="font-bold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2.5em] mb-1">{product.name}</h3>
-
-                            <div className="flex items-center gap-1 mb-2">
-                                <div className="flex text-yellow-400">
-                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                                </div>
-                                <span className="text-[10px] font-bold text-gray-600">{product.rating}</span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <span className="text-sm font-black text-gray-900">${product.price}</span>
-                                    {product.originalPrice && (
-                                        <span className="text-[10px] font-medium text-gray-400 line-through ml-1">${product.originalPrice.toFixed(2)}</span>
+                {isLoading ? (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="w-8 h-8 text-[#F05359] animate-spin" />
+                    </div>
+                ) : filteredProducts.length === 0 ? (
+                    <div className="text-center py-12">
+                        <p className="text-sm text-gray-400">No products found in this category.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                        {filteredProducts.map(product => (
+                            <div key={product._id} className="bg-white p-3 rounded-3xl group bubble-card">
+                                <div className="relative aspect-square rounded-2xl bg-gray-100 mb-3 overflow-hidden">
+                                    {product.images[0] ? (
+                                        <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-orange-50">
+                                            <ShoppingCart className="w-8 h-8 text-gray-300" />
+                                        </div>
+                                    )}
+                                    <button className="absolute top-2 right-2 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
+                                        <div className="w-4 h-4"><ShoppingCart className="w-3.5 h-3.5" /></div>
+                                    </button>
+                                    {product.stock < 10 && product.stock > 0 && (
+                                        <div className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                            Only {product.stock} left
+                                        </div>
                                     )}
                                 </div>
-                            </div>
 
-                            <button className="w-full mt-3 bg-primary/10 hover:bg-primary text-primary hover:text-white py-2 rounded-xl text-xs font-bold transition-all">
-                                Add to Cart
-                            </button>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{product.category}</p>
+                                <h3 className="font-bold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[2.5em] mb-1">{product.name}</h3>
 
-                            <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400 font-medium">
-                                <div className="w-3 h-3 rounded-full border border-gray-300 flex items-center justify-center">
-                                    <div className="w-1.5 h-1.5 border-t border-r border-gray-400 rotate-45"></div>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className="text-sm font-black text-gray-900">₹{product.price}</span>
+                                    </div>
                                 </div>
-                                ETA: <span className="text-cyan-600">{product.eta}</span>
+
+                                <button
+                                    onClick={() => handleAddToCart(product._id)}
+                                    className="w-full mt-3 bg-primary/10 hover:bg-primary text-primary hover:text-white py-2 rounded-xl text-xs font-bold transition-all"
+                                >
+                                    Add to Cart
+                                </button>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </main>
         </>
     );

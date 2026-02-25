@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useSection } from "@/context/SectionContext";
+import { useAuth } from "@/context/AuthContext";
+import { usePets, useReminders } from "@/hooks/useData";
 import {
     MapPin,
     Bell,
@@ -13,32 +16,84 @@ import {
     Plus,
     ChevronRight,
     Syringe,
+    Cake,
+    Gift,
+    LogOut,
+    Loader2,
 } from "lucide-react";
+
+/* ─── Helpers ─── */
+function getGreeting(): string {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+}
+
+function getBirthdayCountdown(birthday: Date) {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+
+    // Next occurrence of the birthday
+    let next = new Date(thisYear, birthday.getMonth(), birthday.getDate());
+    if (next.getTime() <= now.getTime()) {
+        next = new Date(thisYear + 1, birthday.getMonth(), birthday.getDate());
+    }
+
+    const diff = next.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    const isToday = days === 0 && hours < 24;
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const dateLabel = `${birthday.getDate()} ${monthNames[birthday.getMonth()]}`;
+
+    return { days, hours, minutes, isToday, dateLabel };
+}
 
 const QUICK_ACTIONS = [
     {
-        icon: <PawPrint className="w-6 h-6 text-[#F05359]" />,
-        label: "Pet Management",
+        icon: <PawPrint className="w-6 h-6 text-[#ef6c00]" />,
+        label: "My Pets",
+        sublabel: "Manage profiles & records",
         section: "pets" as const,
-        bg: "bg-red-50",
+        bgColor: "bg-white",
+        iconBg: "bg-[#fff3e0]",
+        blobColor: "bg-[#ffe0b2]/60",
+        active: false,
     },
     {
-        icon: <ShoppingBag className="w-6 h-6 text-[#F05359]" />,
+        icon: <ShoppingBag className="w-6 h-6 text-[#1565c0]" />,
         label: "Quick Store",
+        sublabel: "Shop essentials fast",
         section: "store" as const,
-        bg: "bg-orange-50",
+        bgColor: "bg-white",
+        iconBg: "bg-[#e3f2fd]",
+        blobColor: "bg-[#bbdefb]/60",
+        active: false,
     },
     {
-        icon: <Heart className="w-6 h-6 text-[#F05359]" />,
+        icon: <Plus className="w-6 h-6 text-white" strokeWidth={3} />,
         label: "Rescue Help",
+        sublabel: "Emergency SOS & Vets",
         section: "rescue" as const,
-        bg: "bg-pink-50",
+        bgColor: "bg-[#F05359]",
+        iconBg: "bg-white/20",
+        blobColor: "bg-white/10",
+        active: true,
+        textColor: "text-white",
+        subLabelColor: "text-white/80",
     },
     {
-        icon: <Users className="w-6 h-6 text-[#F05359]" />,
+        icon: <Users className="w-6 h-6 text-[#2e7d32]" />,
         label: "Community",
+        sublabel: "Connect with parents",
         section: "community" as const,
-        bg: "bg-purple-50",
+        bgColor: "bg-white",
+        iconBg: "bg-[#e8f5e9]",
+        blobColor: "bg-[#c8e6c9]/60",
+        active: false,
     },
 ];
 
@@ -82,6 +137,50 @@ const FEATURED_SERVICES = [
 
 export function HomeSection() {
     const { setActiveSection } = useSection();
+    const { user, logout } = useAuth();
+    const { pets } = usePets();
+    const { reminders } = useReminders();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            await logout();
+        } catch {
+            // Logout anyway
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
+    // Use first pet's data or fallback
+    const firstPet = pets[0];
+    const petName = firstPet?.name || "Buddy";
+    const petBirthday = firstPet?.dob ? new Date(firstPet.dob) : new Date(2023, 5, 15);
+
+    const greeting = useMemo(() => getGreeting(), []);
+    const bday = useMemo(() => getBirthdayCountdown(petBirthday), [petBirthday]);
+
+    // Get next upcoming reminder
+    const nextReminder = useMemo(() => {
+        if (!reminders.length) return null;
+        const upcoming = reminders
+            .filter((r) => r.isActive && new Date(r.scheduledAt) > new Date())
+            .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+        return upcoming[0] || null;
+    }, [reminders]);
+
+    // Format reminder time
+    const reminderLabel = useMemo(() => {
+        if (!nextReminder) return null;
+        const d = new Date(nextReminder.scheduledAt);
+        const now = new Date();
+        const diffMs = d.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) return "today";
+        if (diffDays === 1) return "tomorrow";
+        return `in ${diffDays} days`;
+    }, [nextReminder]);
 
     return (
         <>
@@ -93,21 +192,37 @@ export function HomeSection() {
                             <MapPin className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-gray-900">Hello, Kanpur!</h1>
+                            <h1 className="text-lg font-bold text-gray-900">
+                                {greeting}, {user?.name || petName}&apos;s human! 🐾
+                            </h1>
                             <p className="text-xs text-gray-500">Civil Lines, Kanpur</p>
                         </div>
                     </div>
-                    <button onClick={() => setActiveSection("notifications")} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center relative">
-                        <Bell className="w-5 h-5 text-gray-700" />
-                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#F05359] rounded-full border-2 border-white" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setActiveSection("notifications")} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center relative">
+                            <Bell className="w-5 h-5 text-gray-700" />
+                            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#F05359] rounded-full border-2 border-white" />
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center relative hover:bg-red-100 transition-colors disabled:opacity-60"
+                            title="Log Out"
+                        >
+                            {isLoggingOut ? (
+                                <Loader2 className="w-5 h-5 text-[#F05359] animate-spin" />
+                            ) : (
+                                <LogOut className="w-4.5 h-4.5 text-[#F05359]" />
+                            )}
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <main className="pb-32">
+            <main className="pb-32 paw-bg">
                 {/* Search Bar */}
                 <div className="px-4 py-3">
-                    <div className="bg-gray-50 border border-gray-200 rounded-2xl flex items-center px-4 py-3">
+                    <div className="bg-gray-50/80 border border-gray-200/60 rounded-3xl flex items-center px-4 py-3 bubble-sm">
                         <Search className="w-5 h-5 text-gray-400 mr-3" />
                         <input
                             type="text"
@@ -119,7 +234,7 @@ export function HomeSection() {
 
                 {/* Smart Reminder */}
                 <div className="px-4 py-2">
-                    <div className="bg-gradient-to-r from-pink-50 to-pink-100 rounded-2xl p-4 flex items-center gap-3 border border-pink-200">
+                    <div className="bg-gradient-to-r from-pink-50 to-pink-100 rounded-3xl p-4 flex items-center gap-3 border border-pink-200/60 bubble-card">
                         <div className="w-12 h-12 bg-[#F05359] rounded-xl flex items-center justify-center shrink-0">
                             <Syringe className="w-6 h-6 text-white" />
                         </div>
@@ -135,20 +250,87 @@ export function HomeSection() {
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="px-4 py-4">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-                    <div className="grid grid-cols-2 gap-3">
+                {/* 🎂 Birthday Countdown */}
+                <div className="px-4 py-2">
+                    <div className="relative overflow-hidden bg-gradient-to-br from-amber-100 via-pink-100 to-purple-100 rounded-3xl p-5 border border-pink-200/40 bubble-card">
+                        {/* confetti-style floating dots */}
+                        <div className="absolute top-3 right-8 w-2 h-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0s' }} />
+                        <div className="absolute top-6 right-4 w-1.5 h-1.5 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '0.3s' }} />
+                        <div className="absolute bottom-5 right-12 w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0.6s' }} />
+                        <div className="absolute top-4 left-[60%] w-1 h-1 rounded-full bg-[#F05359] animate-bounce" style={{ animationDelay: '0.15s' }} />
+
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-14 h-14 bg-white/70 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+                                {bday.isToday ? (
+                                    <span className="text-3xl">🥳</span>
+                                ) : (
+                                    <Cake className="w-7 h-7 text-[#F05359]" />
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                {bday.isToday ? (
+                                    <>
+                                        <p className="text-[10px] font-bold text-[#F05359] uppercase tracking-wider mb-0.5">🎉 Happy Birthday!</p>
+                                        <p className="text-sm font-bold text-gray-900 leading-tight">
+                                            It&apos;s {petName}&apos;s special day today!
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-0.5">
+                                            🎂 {petName}&apos;s Birthday · {bday.dateLabel}
+                                        </p>
+                                        <div className="flex items-baseline gap-3 mt-1">
+                                            <div className="text-center">
+                                                <span className="text-2xl font-black text-gray-900 leading-none">{bday.days}</span>
+                                                <span className="block text-[9px] text-gray-500 font-bold uppercase">days</span>
+                                            </div>
+                                            <span className="text-gray-300 text-lg font-light">:</span>
+                                            <div className="text-center">
+                                                <span className="text-2xl font-black text-gray-900 leading-none">{bday.hours}</span>
+                                                <span className="block text-[9px] text-gray-500 font-bold uppercase">hrs</span>
+                                            </div>
+                                            <span className="text-gray-300 text-lg font-light">:</span>
+                                            <div className="text-center">
+                                                <span className="text-2xl font-black text-gray-900 leading-none">{bday.minutes}</span>
+                                                <span className="block text-[9px] text-gray-500 font-bold uppercase">min</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <button className="w-10 h-10 bg-white/70 backdrop-blur-sm rounded-full flex items-center justify-center shrink-0 hover:bg-white transition-colors shadow-sm">
+                                <Gift className="w-5 h-5 text-purple-500" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* What do you need? */}
+                <div className="px-4 py-6">
+                    <h2 className="text-2xl font-black text-gray-900 mb-6">What do you need?</h2>
+                    <div className="grid grid-cols-2 gap-4">
                         {QUICK_ACTIONS.map((action) => (
                             <button
                                 key={action.label}
                                 onClick={() => setActiveSection(action.section)}
-                                className={`${action.bg} rounded-2xl p-4 flex flex-col items-start gap-3 hover:shadow-md transition-shadow border border-gray-100/50 text-left`}
+                                className={`relative overflow-hidden ${action.bgColor} ${action.active ? 'shadow-xl shadow-[#F05359]/30 ring-1 ring-[#F05359]/10' : 'border border-gray-100/50'} p-5 flex flex-col items-start gap-4 transition-all text-left bubble-card min-h-[165px] group`}
                             >
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                                {/* Decorative Blob */}
+                                <div className={`absolute -top-7 -right-7 w-28 h-28 ${action.blobColor} rounded-full transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12`} />
+
+                                <div className={`relative z-10 w-12 h-12 ${action.iconBg} rounded-3xl flex items-center justify-center shadow-sm`}>
                                     {action.icon}
                                 </div>
-                                <span className="text-sm font-bold text-gray-800">{action.label}</span>
+
+                                <div className="relative z-10">
+                                    <h3 className={`text-base font-bold ${"textColor" in action ? action.textColor : 'text-gray-900'} leading-tight mb-1`}>
+                                        {action.label}
+                                    </h3>
+                                    <p className={`text-[11px] font-medium ${"subLabelColor" in action ? action.subLabelColor : 'text-gray-500'} leading-snug opacity-90`}>
+                                        {action.sublabel}
+                                    </p>
+                                </div>
                             </button>
                         ))}
                     </div>
@@ -164,7 +346,7 @@ export function HomeSection() {
                         {SPECIAL_OFFERS.map((offer) => (
                             <div
                                 key={offer.id}
-                                className={`bg-gradient-to-br ${offer.gradient} rounded-2xl p-4 min-w-[260px] shrink-0 relative overflow-hidden`}
+                                className={`bg-gradient-to-br ${offer.gradient} p-4 min-w-[260px] shrink-0 relative overflow-hidden bubble-float`}
                             >
                                 {/* Decorative circles */}
                                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full" />
@@ -196,7 +378,7 @@ export function HomeSection() {
                         {FEATURED_SERVICES.map((service) => (
                             <div
                                 key={service.id}
-                                className="bg-white rounded-2xl p-3 flex items-center gap-3 border border-gray-100 shadow-sm"
+                                className="bg-white p-3 flex items-center gap-3 border border-gray-100/50 bubble-card"
                             >
                                 <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
                                     <img

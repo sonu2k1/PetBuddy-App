@@ -79,7 +79,7 @@ export function ServicesSection() {
 
             <ServiceFilter activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
-            <main className="px-5 py-4 pb-32 space-y-6">
+            <main className="px-5 py-4 pb-32 space-y-6 paw-bg">
                 {/* Top Rated Section */}
                 <div className="space-y-4">
                     <div className="flex justify-between items-end px-1">
@@ -93,7 +93,7 @@ export function ServicesSection() {
                 </div>
 
                 {/* Verified Professionals Banner */}
-                <div className="bg-red-50 rounded-3xl p-5 flex items-center gap-4">
+                <div className="bg-red-50 rounded-3xl p-5 flex items-center gap-4 bubble-card">
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                             <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">

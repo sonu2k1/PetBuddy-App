@@ -35,7 +35,7 @@ export function ProductSection() {
                 </div>
             </div>
 
-            <main className="pb-32">
+            <main className="pb-32 paw-bg">
                 <ProductGallery images={PRODUCT_IMAGES} />
 
                 <div className="px-4">

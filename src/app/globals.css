@@ -35,3 +35,198 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ═══════════════════════════════════════════════════════
+   PAW PATTERN BACKGROUND
+   Subtle repeating paw prints across all sections
+   ═══════════════════════════════════════════════════════ */
+
+.paw-bg {
+  position: relative;
+}
+
+.paw-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23F05359'%3E%3Cellipse cx='40' cy='48' rx='9' ry='11'/%3E%3Cellipse cx='28' cy='32' rx='5.5' ry='7' transform='rotate(-15 28 32)'/%3E%3Cellipse cx='52' cy='32' rx='5.5' ry='7' transform='rotate(15 52 32)'/%3E%3Cellipse cx='22' cy='44' rx='4.5' ry='6' transform='rotate(-30 22 44)'/%3E%3Cellipse cx='58' cy='44' rx='4.5' ry='6' transform='rotate(30 58 44)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 80px 80px;
+  background-repeat: repeat;
+}
+
+.paw-bg>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* Lighter paw pattern variant */
+.paw-bg-light::before {
+  opacity: 0.02;
+}
+
+/* Denser paw pattern variant */
+.paw-bg-dense::before {
+  opacity: 0.05;
+  background-size: 60px 60px;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   BUBBLE CARDS
+   Extra-rounded corners with soft layered shadows
+   ═══════════════════════════════════════════════════════ */
+
+.bubble-card {
+  border-radius: 24px !important;
+  box-shadow:
+    0 2px 8px rgba(240, 83, 89, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(240, 83, 89, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bubble-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px rgba(240, 83, 89, 0.10),
+    0 12px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(240, 83, 89, 0.06);
+}
+
+.bubble-card:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* Smaller bubble variant */
+.bubble-sm {
+  border-radius: 20px !important;
+  box-shadow:
+    0 1px 4px rgba(240, 83, 89, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+/* Floating bubble — for FABs and highlights */
+.bubble-float {
+  border-radius: 28px !important;
+  box-shadow:
+    0 4px 16px rgba(240, 83, 89, 0.15),
+    0 12px 40px rgba(240, 83, 89, 0.08);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   PAW TOGGLE SWITCH 🐾
+   Custom toggle with a paw print as the thumb
+   ═══════════════════════════════════════════════════════ */
+
+.paw-toggle {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: #e5e7eb;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  border: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.paw-toggle[data-checked="true"] {
+  background: linear-gradient(135deg, #F05359, #FF8A9B);
+}
+
+/* Track bone decoration */
+.paw-toggle::before {
+  content: '🦴';
+  position: absolute;
+  font-size: 10px;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.paw-toggle[data-checked="true"]::before {
+  right: auto;
+  left: 8px;
+  opacity: 0.6;
+}
+
+/* Paw thumb */
+.paw-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paw-toggle[data-checked="true"] .paw-toggle-thumb {
+  transform: translateX(24px);
+}
+
+/* Paw icon inside thumb */
+.paw-toggle-thumb::after {
+  content: '🐾';
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Bone toggle variant */
+.bone-toggle .paw-toggle-thumb::after {
+  content: '🦴';
+  font-size: 11px;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   VOICE WAVE ANIMATION
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes voiceWave {
+  0% {
+    height: 4px;
+  }
+
+  50% {
+    height: 20px;
+  }
+
+  100% {
+    height: 8px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   UTILITY HELPERS
+   ═══════════════════════════════════════════════════════ */
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glass effect for overlays */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}

@@ -48,7 +48,7 @@ export function BookingSection() {
                 <BookingStepper currentStep={step} />
             </div>
 
-            <main className="px-4 py-6 pb-24">
+            <main className="px-4 py-6 pb-24 paw-bg">
                 {step === 1 && (
                     <ServiceSelection
                         selectedService={selectedService}

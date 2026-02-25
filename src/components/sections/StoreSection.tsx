@@ -12,7 +12,7 @@ export function StoreSection() {
         <>
             <StoreHeader />
 
-            <main className="pb-36">
+            <main className="pb-36 paw-bg">
                 <CategoryPills />
                 <FlashDeliveryBanner />
                 <PetEssentials />
