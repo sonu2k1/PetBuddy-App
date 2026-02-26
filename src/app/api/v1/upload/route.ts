@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+import { bootstrap } from '@/server/bootstrap';
 import { sendSuccess, sendError } from '@/server/utils/apiResponse';
 
 // ─── POST /api/v1/upload — Upload an image file ─────
 export async function POST(req: NextRequest) {
     try {
+        await bootstrap(); // ensures Cloudinary is configured
+
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
 
@@ -26,26 +27,19 @@ export async function POST(req: NextRequest) {
             return sendError('File too large. Maximum size is 5MB.', 400);
         }
 
-        // Generate unique filename
-        const ext = file.name.split('.').pop() || 'jpg';
-        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-
-        // Ensure uploads directory exists
-        const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-        if (!existsSync(uploadsDir)) {
-            await mkdir(uploadsDir, { recursive: true });
-        }
-
-        // Write file to disk
+        // Convert file to base64 data URI for Cloudinary upload
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const filePath = path.join(uploadsDir, uniqueName);
-        await writeFile(filePath, buffer);
+        const base64 = buffer.toString('base64');
+        const dataUri = `data:${file.type};base64,${base64}`;
 
-        // Return the public URL
-        const imageUrl = `/uploads/${uniqueName}`;
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataUri, {
+            folder: 'petbuddy/uploads',
+            resource_type: 'image',
+        });
 
-        return sendSuccess('File uploaded successfully', { imageUrl }, 201);
+        return sendSuccess('File uploaded successfully', { imageUrl: result.secure_url }, 201);
     } catch (error) {
         console.error('Upload error:', error);
         return sendError('Failed to upload file', 500);

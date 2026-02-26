@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { v2 as cloudinary } from 'cloudinary';
 import { bootstrap } from '@/server/bootstrap';
 import { withErrorHandler } from '@/server/middlewares/errorHandler';
 import { logRequest } from '@/server/middlewares/httpLogger';
@@ -32,23 +33,22 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
         const imageFile = formData.get('image') as File | null;
         if (imageFile && imageFile.size > 0) {
-            // Upload image using the existing upload infrastructure
-            const { writeFile, mkdir } = await import('fs/promises');
-            const { existsSync } = await import('fs');
-            const path = await import('path');
-
-            const ext = imageFile.name.split('.').pop() || 'jpg';
-            const uniqueName = `pet-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-            const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-            if (!existsSync(uploadsDir)) {
-                await mkdir(uploadsDir, { recursive: true });
-            }
-
+            // Upload image to Cloudinary (Vercel has read-only filesystem)
             const bytes = await imageFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
-            await writeFile(path.join(uploadsDir, uniqueName), buffer);
+            const base64 = buffer.toString('base64');
+            const dataUri = `data:${imageFile.type};base64,${base64}`;
 
-            body.imageUrl = `/uploads/${uniqueName}`;
+            try {
+                const result = await cloudinary.uploader.upload(dataUri, {
+                    folder: 'petbuddy/pets',
+                    resource_type: 'image',
+                });
+                body.imageUrl = result.secure_url;
+            } catch (uploadErr) {
+                console.error('Pet image upload failed:', uploadErr);
+                // Continue without image rather than failing the whole request
+            }
         }
     } else {
         body = await req.json();
