@@ -20,6 +20,11 @@ export const verifyOtpSchema = z.object({
         .trim()
         .length(6, 'OTP must be exactly 6 digits')
         .regex(/^\d{6}$/, 'OTP must be numeric'),
+    name: z
+        .string()
+        .trim()
+        .max(60, 'Name is too long')
+        .optional(),
 });
 
 export const refreshTokenSchema = z.object({

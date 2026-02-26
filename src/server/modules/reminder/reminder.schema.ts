@@ -15,8 +15,7 @@ export const createReminderSchema = z.object({
         .max(100, 'Type cannot exceed 100 characters'),
     scheduledAt: z
         .string()
-        .refine((val) => !isNaN(Date.parse(val)), 'Invalid date format')
-        .refine((val) => new Date(val) > new Date(), 'Scheduled date must be in the future'),
+        .refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
     repeat: repeatEnum.optional().default('none'),
     isActive: z.boolean().optional().default(true),
 });

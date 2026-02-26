@@ -267,24 +267,52 @@ export function RescueSection() {
             const { latitude, longitude } = position.coords;
             setLocationCoords({ lat: latitude, lng: longitude });
 
-            // Reverse geocode via our server-side proxy (avoids CORS)
+            // Reverse geocode — first try BigDataCloud (CORS-safe, no key)
             try {
-                const res = await fetch(
-                    `/api/v1/geocode/reverse?lat=${latitude}&lon=${longitude}`
+                const bdcRes = await fetch(
+                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
                 );
-                const data = await res.json();
-                const addr = data.address;
+                if (bdcRes.ok) {
+                    const d = await bdcRes.json();
+                    const locality: string = d.locality || d.neighbourhood || "";
+                    const city: string = d.city || d.county || d.principalSubdivision || "";
 
-                // Build a short primary name
-                const shortParts = [
-                    addr?.road || addr?.pedestrian || addr?.hamlet || "",
-                    addr?.suburb || addr?.neighbourhood || addr?.village || addr?.town || "",
-                    addr?.city || addr?.county || "",
-                ].filter(Boolean);
-                setLocationName(shortParts.length > 0 ? shortParts.slice(0, 2).join(", ") : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    let shortName: string;
+                    if (locality && city && locality !== city) {
+                        shortName = `${locality}, ${city}`;
+                    } else if (city) {
+                        shortName = city;
+                    } else if (locality) {
+                        shortName = locality;
+                    } else {
+                        shortName = d.countryName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                    }
 
-                // Use Nominatim's full display_name for the proper address
-                setLocationFullAddress(data.display_name || shortParts.join(", "));
+                    const full = [locality, city, d.principalSubdivision, d.countryName]
+                        .filter(Boolean)
+                        .join(", ");
+
+                    setLocationName(shortName);
+                    setLocationFullAddress(full || shortName);
+                    return; // success — skip proxy
+                }
+            } catch {
+                // fall through to server proxy
+            }
+
+            // Fallback: server-side Nominatim proxy (accepts both lng and lon)
+            try {
+                const proxyRes = await fetch(
+                    `/api/v1/geocode/reverse?lat=${latitude}&lng=${longitude}`
+                );
+                if (proxyRes.ok) {
+                    const d = await proxyRes.json();
+                    setLocationName(d.data?.label || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    setLocationFullAddress(d.data?.fullAddress || null);
+                } else {
+                    setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    setLocationFullAddress(null);
+                }
             } catch {
                 setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
                 setLocationFullAddress(null);

@@ -24,7 +24,10 @@ import { AddPetModal } from "@/components/pets/AddPetModal";
 import { EditPetModal } from "@/components/pets/EditPetModal";
 import { PetHealthChat } from "@/components/pets/PetHealthChat";
 import { AddHealthRecordModal } from "@/components/pets/AddHealthRecordModal";
+import { QRCodeModal } from "@/components/pets/QRCodeModal";
+import { FeedingReminderModal } from "@/components/pets/FeedingReminderModal";
 import { api } from "@/lib/api-client";
+import { useReminders } from "@/hooks/useData";
 
 function getAge(dob: string): string {
     const birth = new Date(dob);
@@ -66,18 +69,54 @@ export function PetsSection() {
     const { pets, isLoading, refetch } = usePets();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [vaccinationAlerts, setVaccinationAlerts] = useState(true);
-    const [feedingReminders, setFeedingReminders] = useState(false);
     const [showAddPet, setShowAddPet] = useState(false);
     const [showEditPet, setShowEditPet] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showAddHealthRecord, setShowAddHealthRecord] = useState(false);
+    const [showQRModal, setShowQRModal] = useState(false);
+    const [showFeedingModal, setShowFeedingModal] = useState(false);
+    const [isDeletingFeedingReminders, setIsDeletingFeedingReminders] = useState(false);
     const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
 
     const pet = pets[selectedIndex] || null;
     const petAge = useMemo(() => (pet ? getAge(pet.dob) : ""), [pet]);
+
+    // Fetch feeding reminders for the selected pet
+    const { reminders: petReminders, refetch: refetchReminders } = useReminders(pet?._id);
+
+    // Derive toggle state from existing active feeding reminders
+    const feedingReminders = useMemo(
+        () => petReminders.some((r) => r.isActive && r.type.startsWith("feeding:")),
+        [petReminders]
+    );
+
+    // Handler: toggle feeding reminders ON / OFF
+    const handleFeedingToggle = useCallback(async (newValue: boolean) => {
+        if (newValue) {
+            // Open the setup modal
+            setShowFeedingModal(true);
+        } else {
+            // Delete all feeding reminders for this pet
+            const feedingRems = petReminders.filter(
+                (r) => r.isActive && r.type.startsWith("feeding:")
+            );
+            if (feedingRems.length === 0) return;
+            setIsDeletingFeedingReminders(true);
+            try {
+                await Promise.all(
+                    feedingRems.map((r) => api.delete(`/reminders/${r._id}`))
+                );
+                refetchReminders();
+            } catch (err) {
+                console.error("Failed to delete feeding reminders:", err);
+            } finally {
+                setIsDeletingFeedingReminders(false);
+            }
+        }
+    }, [petReminders, refetchReminders]);
 
     // Fetch health records when pet changes
     const fetchHealthRecords = useCallback(async () => {
@@ -148,8 +187,14 @@ export function PetsSection() {
                     <ArrowLeft className="w-5 h-5 text-gray-800" />
                 </button>
                 <h1 className="text-lg font-bold text-gray-900">Pet Profile</h1>
-                <button className="p-1 hover:bg-gray-100 rounded-full">
-                    <QrCode className="w-5 h-5 text-gray-800" />
+                <button
+                    onClick={() => pet && setShowQRModal(true)}
+                    className={`p-1 rounded-full transition-colors ${pet ? "hover:bg-red-50 text-[#F05359]" : "text-gray-300 cursor-not-allowed"
+                        }`}
+                    title={pet ? `Show QR code for ${pet.name}` : "No pet selected"}
+                    disabled={!pet}
+                >
+                    <QrCode className="w-5 h-5" />
                 </button>
             </div>
 
@@ -329,13 +374,22 @@ export function PetsSection() {
                                 <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                                            <Utensils className="w-5 h-5 text-purple-500" />
+                                            {isDeletingFeedingReminders ? (
+                                                <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
+                                            ) : (
+                                                <Utensils className="w-5 h-5 text-purple-500" />
+                                            )}
                                         </div>
-                                        <span className="font-bold text-gray-900 text-sm">Feeding Reminders</span>
+                                        <div>
+                                            <span className="font-bold text-gray-900 text-sm">Feeding Reminders</span>
+                                            {feedingReminders && (
+                                                <p className="text-[10px] text-purple-500 font-semibold mt-0.5">Active · Repeats daily</p>
+                                            )}
+                                        </div>
                                     </div>
                                     <PawToggle
                                         checked={feedingReminders}
-                                        onChange={setFeedingReminders}
+                                        onChange={handleFeedingToggle}
                                         variant="bone"
                                         size="md"
                                     />
@@ -424,6 +478,25 @@ export function PetsSection() {
                     petName={pet.name}
                     onClose={() => setShowAddHealthRecord(false)}
                     onSuccess={fetchHealthRecords}
+                />
+            )}
+
+            {/* QR Code Modal */}
+            {pet && (
+                <QRCodeModal
+                    open={showQRModal}
+                    pet={pet}
+                    onClose={() => setShowQRModal(false)}
+                />
+            )}
+
+            {/* Feeding Reminder Modal */}
+            {pet && (
+                <FeedingReminderModal
+                    open={showFeedingModal}
+                    pet={pet}
+                    onClose={() => setShowFeedingModal(false)}
+                    onSuccess={refetchReminders}
                 />
             )}
         </>

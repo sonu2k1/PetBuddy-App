@@ -366,23 +366,33 @@ function CreatePostPage({
 
             const { latitude, longitude } = position.coords;
 
-            // Reverse geocode via our server-side proxy (avoids CORS)
+            // Reverse geocode — BigDataCloud first (CORS-safe), then server proxy
             try {
-                const res = await fetch(
-                    `/api/v1/geocode/reverse?lat=${latitude}&lon=${longitude}`
+                const bdcRes = await fetch(
+                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
                 );
-                const data = await res.json();
-                const addr = data.address;
-                // Build a short readable location
-                const parts = [
-                    addr?.suburb || addr?.neighbourhood || addr?.village || "",
-                    addr?.city || addr?.town || addr?.county || "",
-                    addr?.state || "",
-                ].filter(Boolean);
-                setLocation(parts.length > 0 ? parts.slice(0, 2).join(", ") : `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+                if (bdcRes.ok) {
+                    const d = await bdcRes.json();
+                    const locality = d.locality || d.neighbourhood || "";
+                    const city = d.city || d.county || d.principalSubdivision || "";
+                    const label = locality && city && locality !== city ? `${locality}, ${city}` : city || locality || d.countryName || "";
+                    setLocation(label || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                } else {
+                    throw new Error("BigDataCloud failed");
+                }
             } catch {
-                // Fallback to coordinates if reverse geocoding fails
-                setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                // Fallback: server-side proxy
+                try {
+                    const proxyRes = await fetch(`/api/v1/geocode/reverse?lat=${latitude}&lng=${longitude}`);
+                    if (proxyRes.ok) {
+                        const d = await proxyRes.json();
+                        setLocation(d.data?.label || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    } else {
+                        setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    }
+                } catch {
+                    setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                }
             }
         } catch (err: unknown) {
             const geoErr = err as GeolocationPositionError;
@@ -865,15 +875,26 @@ export function CommunitySection() {
             )}
 
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-white px-4 py-3 flex items-center justify-between">
-                <h1 className="text-xl font-bold text-gray-900">Community</h1>
-                <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="bg-[#F05359] text-white px-4 py-2 rounded-xl flex items-center gap-1.5 font-bold text-sm shadow-lg shadow-red-200 hover:bg-[#e0484e] active:scale-95 transition-all"
-                >
-                    <Plus className="w-4 h-4" />
-                    Create Post
-                </button>
+            <div className="sticky top-0 z-50 bg-white px-4 py-3">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-gray-900">Community</h1>
+                    <button
+                        onClick={() => setShowCreatePost(true)}
+                        className="bg-[#F05359] text-white px-4 py-2 rounded-xl flex items-center gap-1.5 font-bold text-sm shadow-lg shadow-red-200 hover:bg-[#e0484e] active:scale-95 transition-all"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Create Post
+                    </button>
+                </div>
+                {/* Logged-in user identity */}
+                {user?.name && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-100 to-orange-100 flex items-center justify-center">
+                            <User className="w-3.5 h-3.5 text-[#F05359]/60" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-600">Posting as <span className="text-[#F05359]">{user.name}</span></span>
+                    </div>
+                )}
             </div>
 
             {/* Category Tabs */}

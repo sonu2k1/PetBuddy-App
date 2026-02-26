@@ -6,7 +6,7 @@ import { authenticate } from '@/server/middlewares/auth';
 import { sendSuccess, sendError } from '@/server/utils/apiResponse';
 import { BadRequestError } from '@/server/utils/AppError';
 import { updateReminderSchema } from '@/server/modules/reminder/reminder.schema';
-import { updateReminder } from '@/server/modules/reminder/reminder.service';
+import { updateReminder, deleteReminder } from '@/server/modules/reminder/reminder.service';
 import { ZodError } from 'zod';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -42,4 +42,21 @@ export const PATCH = withErrorHandler(async (req: NextRequest, context: RouteCon
     const updated = await updateReminder(id, user.userId, validated);
 
     return sendSuccess('Reminder updated successfully', updated);
+});
+
+// ─── DELETE /api/v1/reminders/:id — Delete reminder ──
+export const DELETE = withErrorHandler(async (req: NextRequest, context: RouteContext) => {
+    logRequest(req);
+    await bootstrap();
+
+    const user = authenticate(req);
+
+    const { id } = await context.params;
+    if (!id || id.length !== 24) {
+        throw new BadRequestError('Invalid reminder ID');
+    }
+
+    await deleteReminder(id, user.userId);
+
+    return sendSuccess('Reminder deleted successfully', null);
 });

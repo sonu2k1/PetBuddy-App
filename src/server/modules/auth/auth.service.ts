@@ -107,7 +107,7 @@ export const sendOtp = async (phone: string) => {
  * - Session locking: invalidates previous session
  * - Returns JWT token pair
  */
-export const verifyOtp = async (phone: string, otp: string) => {
+export const verifyOtp = async (phone: string, otp: string, name?: string) => {
     const normalisedPhone = normalisePhone(phone);
     const redis = getRedisClient();
 
@@ -155,12 +155,17 @@ export const verifyOtp = async (phone: string, otp: string) => {
         user = await User.create({
             phone: normalisedPhone,
             isVerified: true,
+            ...(name ? { name: name.trim() } : {}),
         });
         isNewUser = true;
-        logger.info(`👤 New user created: ${normalisedPhone}`);
+        logger.info(`👤 New user created: ${normalisedPhone} (name: ${name || 'not provided'})`);
     } else {
         if (!user.isVerified) {
             user.isVerified = true;
+        }
+        // Save the name for existing users if they provided one during login
+        if (name) {
+            user.name = name.trim();
         }
     }
 

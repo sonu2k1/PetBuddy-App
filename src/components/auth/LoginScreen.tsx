@@ -17,6 +17,8 @@ export function LoginScreen() {
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+    const [name, setName] = useState("");
+
     // Focus first OTP input when we enter OTP step
     useEffect(() => {
         if (step === "otp") {
@@ -55,7 +57,7 @@ export function LoginScreen() {
         setIsLoading(true);
         setError("");
         try {
-            await verifyOtp(phone, otpStr);
+            await verifyOtp(phone, otpStr, name.trim() || undefined);
         } catch (err: unknown) {
             setError((err as Error).message || "Invalid OTP");
         } finally {
@@ -119,26 +121,45 @@ export function LoginScreen() {
 
                         {/* Phone Input Card */}
                         <div style={styles.inputCard}>
-                            <label style={styles.inputLabel}>Phone Number</label>
+                            {/* Name Input */}
+                            <label style={styles.inputLabel}>Your Name <span style={{ color: '#AAA', fontWeight: 400 }}>(optional)</span></label>
                             <div style={styles.phoneInputRow}>
-                                <div style={styles.countryCode}>
-                                    <span style={styles.flag}>+91</span>
-                                    <span style={styles.flagEmoji}>🇮🇳</span>
-                                </div>
+                                <span style={{ fontSize: '20px', flexShrink: 0 }}>👤</span>
                                 <div style={styles.inputDivider} />
                                 <input
-                                    type="tel"
-                                    placeholder="98765 43210"
-                                    value={phone}
-                                    onChange={(e) => {
-                                        setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
-                                        setError("");
-                                    }}
+                                    type="text"
+                                    placeholder="e.g. Rahul Sharma"
+                                    value={name}
+                                    onChange={(e) => { setName(e.target.value.slice(0, 60)); setError(""); }}
                                     onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                                     style={styles.phoneInput}
-                                    maxLength={10}
-                                    autoFocus
+                                    autoCapitalize="words"
+                                    autoComplete="name"
                                 />
+                            </div>
+
+                            <div style={{ marginTop: '20px' }}>
+                                <label style={styles.inputLabel}>Phone Number</label>
+                                <div style={styles.phoneInputRow}>
+                                    <div style={styles.countryCode}>
+                                        <span style={styles.flag}>+91</span>
+                                        <span style={styles.flagEmoji}>🇮🇳</span>
+                                    </div>
+                                    <div style={styles.inputDivider} />
+                                    <input
+                                        type="tel"
+                                        placeholder="98765 43210"
+                                        value={phone}
+                                        onChange={(e) => {
+                                            setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                                            setError("");
+                                        }}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
+                                        style={styles.phoneInput}
+                                        maxLength={10}
+                                        autoFocus
+                                    />
+                                </div>
                             </div>
 
                             {error && (

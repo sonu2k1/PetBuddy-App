@@ -50,7 +50,7 @@ export function middleware(req: NextRequest) {
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://*.tile.openstreetmap.org",
-            "connect-src 'self' https://generativelanguage.googleapis.com",
+            "connect-src 'self' https://generativelanguage.googleapis.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org",
             "frame-src 'self' https://www.openstreetmap.org",
             "frame-ancestors 'none'",
             "base-uri 'self'",

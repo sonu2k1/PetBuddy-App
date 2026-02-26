@@ -24,7 +24,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     sendOtp: (phone: string) => Promise<{ otp?: string }>;
-    verifyOtp: (phone: string, otp: string) => Promise<void>;
+    verifyOtp: (phone: string, otp: string, name?: string) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (user: User) => void;
 }
@@ -77,13 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return result;
     }, []);
 
-    const verifyOtp = useCallback(async (phone: string, otp: string) => {
+    const verifyOtp = useCallback(async (phone: string, otp: string, name?: string) => {
         const result = await api.post<{
             accessToken: string;
             refreshToken: string;
             user: User;
             isNewUser: boolean;
-        }>("/auth/verify-otp", { phone, otp });
+        }>("/auth/verify-otp", { phone, otp, ...(name ? { name } : {}) });
 
         setTokens(result.accessToken, result.refreshToken);
         setUser(result.user);

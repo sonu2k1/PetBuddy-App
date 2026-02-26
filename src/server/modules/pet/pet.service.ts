@@ -5,6 +5,7 @@ import {
     ForbiddenError,
 } from '@/server/utils/AppError';
 import { logger } from '@/server/utils/logger';
+import crypto from 'crypto';
 
 // ─── Helpers ─────────────────────────────────────────
 
@@ -41,6 +42,7 @@ export const createPet = async (
         ...data,
         dob: new Date(data.dob),
         ownerId: userId,
+        qrCodeId: crypto.randomUUID(),
     });
 
     logger.info(`🐾 Pet created: "${pet.name}" for user ${userId}`);

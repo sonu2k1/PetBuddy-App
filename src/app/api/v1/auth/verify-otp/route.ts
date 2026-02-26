@@ -29,7 +29,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     }
 
     // ── Verify OTP ─────────────────────────────────────
-    const result = await verifyOtp(validated.phone, validated.otp);
+    const result = await verifyOtp(validated.phone, validated.otp, validated.name);
 
     const statusCode = result.isNewUser ? 201 : 200;
     const message = result.isNewUser

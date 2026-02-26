@@ -108,3 +108,42 @@ export const deleteHealthRecord = async (
     await HealthRecord.findByIdAndDelete(recordId);
     logger.info(`🗑️  Health record deleted: ${recordId}`);
 };
+
+/**
+ * Get all vaccination records for every pet owned by a user.
+ * Populates pet name, breed, and imageUrl for display purposes.
+ */
+export const getUserVaccinations = async (
+    userId: string,
+    options: { limit?: number } = {},
+): Promise<
+    Array<{
+        _id: string;
+        petId: { _id: string; name: string; breed: string; imageUrl: string | null };
+        type: string;
+        date: Date;
+        notes: string;
+        documentUrl: string | null;
+        createdAt: Date;
+    }>
+> => {
+    const { limit = 50 } = options;
+
+    // Find all pets owned by this user
+    const pets = await Pet.find({ ownerId: userId }).select('_id').lean();
+    const petIds = pets.map((p) => p._id);
+
+    if (petIds.length === 0) return [];
+
+    const records = await HealthRecord.find({
+        petId: { $in: petIds },
+        type: 'vaccination',
+    })
+        .populate('petId', 'name breed imageUrl')
+        .sort({ date: -1 })
+        .limit(limit)
+        .lean();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return records as any;
+};

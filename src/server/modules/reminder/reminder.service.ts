@@ -129,3 +129,21 @@ export const getUserReminders = async (
         },
     };
 };
+
+/**
+ * Delete a reminder. Only the owner can delete.
+ */
+export const deleteReminder = async (
+    reminderId: string,
+    userId: string,
+): Promise<void> => {
+    const reminder = await Reminder.findById(reminderId);
+    if (!reminder) throw new NotFoundError('Reminder not found');
+    if (reminder.userId.toString() !== userId) {
+        throw new ForbiddenError('You do not have permission to delete this reminder');
+    }
+
+    await removeReminderJob(reminderId);
+    await Reminder.findByIdAndDelete(reminderId);
+    logger.info(`🗑️  Reminder deleted: ${reminderId}`);
+};

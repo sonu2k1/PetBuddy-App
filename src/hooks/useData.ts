@@ -115,7 +115,7 @@ export function useProducts(category?: string) {
 // ═══════════════════════════════════════════════════════
 export interface Reminder {
     _id: string;
-    petId: string;
+    petId: string | { _id: string; name: string; breed: string };
     type: string;
     scheduledAt: string;
     repeat: "daily" | "weekly" | "monthly" | "none";
@@ -232,3 +232,25 @@ export function useServiceSlots(serviceId?: string, date?: string) {
 //  MUTATION HELPERS (non-GET)
 // ═══════════════════════════════════════════════════════
 export { api };
+
+// ═══════════════════════════════════════════════════════
+//  VACCINATIONS  (cross-pet, home page display)
+// ═══════════════════════════════════════════════════════
+export interface VaccinationRecord {
+    _id: string;
+    petId: { _id: string; name: string; breed: string; imageUrl: string | null };
+    type: "vaccination";
+    date: string;
+    notes: string;
+    documentUrl: string | null;
+    createdAt: string;
+}
+
+interface VaccinationsResponse {
+    vaccinations: VaccinationRecord[];
+}
+
+export function useVaccinations() {
+    const { data, error, isLoading, refetch } = useFetch<VaccinationsResponse>("/vaccinations");
+    return { vaccinations: data?.vaccinations ?? [], error, isLoading, refetch };
+}
