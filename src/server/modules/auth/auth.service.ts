@@ -95,8 +95,8 @@ export const sendOtp = async (phone: string) => {
         phone: normalisedPhone,
         message: 'OTP sent successfully',
         expiresIn: OTP_EXPIRY_SECONDS,
-        // Include OTP only in development for testing
-        ...(process.env.NODE_ENV === 'development' && { otp }),
+        // TODO: Remove this once SMS provider (Twilio, MSG91, etc.) is integrated
+        otp,
     };
 };
 
