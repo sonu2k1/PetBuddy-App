@@ -293,3 +293,55 @@ body {
 .animate-like-bounce {
   animation: like-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   SPLASH SCREEN ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes splash-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-progress-fill {
+  0% {
+    width: 0%;
+  }
+
+  15% {
+    width: 20%;
+  }
+
+  40% {
+    width: 45%;
+  }
+
+  65% {
+    width: 70%;
+  }
+
+  85% {
+    width: 88%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+.splash-animate-in {
+  animation: splash-fade-in-up 0.8s ease-out both;
+}
+
+.splash-progress-bar {
+  animation: splash-progress-fill ease-in-out both;
+  background: linear-gradient(90deg, #F05359 0%, #2BBFB3 50%, #4ECDC4 100%);
+}

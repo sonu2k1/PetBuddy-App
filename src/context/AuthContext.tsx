@@ -23,6 +23,8 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    justLoggedIn: boolean;
+    clearJustLoggedIn: () => void;
     sendOtp: (phone: string) => Promise<{ otp?: string }>;
     verifyOtp: (phone: string, otp: string, name?: string) => Promise<void>;
     logout: () => Promise<void>;
@@ -35,6 +37,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [justLoggedIn, setJustLoggedIn] = useState(false);
 
     // Hydrate from localStorage on mount
     useEffect(() => {
@@ -87,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setTokens(result.accessToken, result.refreshToken);
         setUser(result.user);
+        setJustLoggedIn(true);
     }, []);
 
     const handleLogout = useCallback(async () => {
@@ -100,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const updateUser = useCallback((u: User) => setUser(u), []);
+    const clearJustLoggedIn = useCallback(() => setJustLoggedIn(false), []);
 
     return (
         <AuthContext.Provider
@@ -107,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 user,
                 isAuthenticated: !!user,
                 isLoading,
+                justLoggedIn,
+                clearJustLoggedIn,
                 sendOtp,
                 verifyOtp,
                 logout: handleLogout,

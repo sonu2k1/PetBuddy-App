@@ -16,6 +16,7 @@ import { BookingSection } from "@/components/sections/BookingSection";
 import { ProductSection } from "@/components/sections/ProductSection";
 import { NotificationsSection } from "@/components/sections/NotificationsSection";
 import { LoginScreen } from "@/components/auth/LoginScreen";
+import { SplashScreen } from "@/components/ui/SplashScreen";
 
 function SectionRenderer() {
   const { activeSection } = useSection();
@@ -51,19 +52,16 @@ function SectionRenderer() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, justLoggedIn, clearJustLoggedIn } = useAuth();
 
+  // Show splash on initial app load (auth hydration)
   if (isLoading) {
-    return (
-      <MobileContainer hideNav>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-3 border-[#F05359] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400 font-medium">Loading...</p>
-          </div>
-        </div>
-      </MobileContainer>
-    );
+    return <SplashScreen duration={5000} />;
+  }
+
+  // Show splash for 5 seconds after OTP login
+  if (isAuthenticated && justLoggedIn) {
+    return <SplashScreen duration={5000} onFinish={clearJustLoggedIn} />;
   }
 
   if (!isAuthenticated) {

@@ -16,6 +16,7 @@ import {
     X,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { SplashScreen } from "@/components/ui/SplashScreen";
 import { cn } from "@/lib/utils";
 import { useSection } from "@/context/SectionContext";
 import { PawToggle } from "@/components/ui/PawToggle";
@@ -80,6 +81,7 @@ export function PetsSection() {
     const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+    const [showPostAddSplash, setShowPostAddSplash] = useState(false);
 
     const pet = pets[selectedIndex] || null;
     const petAge = useMemo(() => (pet ? getAge(pet.dob) : ""), [pet]);
@@ -178,6 +180,24 @@ export function PetsSection() {
             setIsDeleting(false);
         }
     };
+
+    // Handle pet added: show splash then refetch
+    const handlePetAdded = useCallback(() => {
+        setShowPostAddSplash(true);
+    }, []);
+
+    const handlePostAddSplashFinish = useCallback(() => {
+        setShowPostAddSplash(false);
+        refetch().then(() => {
+            // Select the last pet (newly added)
+            setSelectedIndex(pets.length);
+        });
+    }, [refetch, pets.length]);
+
+    // Show splash screen after adding a pet
+    if (showPostAddSplash) {
+        return <SplashScreen duration={5000} onFinish={handlePostAddSplashFinish} />;
+    }
 
     return (
         <>
@@ -457,7 +477,7 @@ export function PetsSection() {
             <AddPetModal
                 open={showAddPet}
                 onClose={() => setShowAddPet(false)}
-                onSuccess={refetch}
+                onSuccess={handlePetAdded}
             />
 
             {/* Edit Pet Modal */}
