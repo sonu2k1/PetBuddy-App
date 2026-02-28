@@ -21,7 +21,7 @@ export function ProductSection() {
         <>
             {/* Header */}
             <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm px-4 py-3 flex items-center justify-between">
-                <button onClick={() => setActiveSection("shop")} className="p-2 hover:bg-gray-100 rounded-full">
+                <button onClick={() => setActiveSection("store")} className="p-2 hover:bg-gray-100 rounded-full">
                     <ArrowLeft className="w-6 h-6 text-gray-700" />
                 </button>
                 <span className="font-bold text-gray-800">Product Details</span>

@@ -188,10 +188,11 @@ export function PetsSection() {
 
     const handlePostAddSplashFinish = useCallback(() => {
         setShowPostAddSplash(false);
-        refetch().then(() => {
-            // Select the last pet (newly added)
+        refetch();
+        // Select the last pet (newly added) on next tick after refetch triggers
+        setTimeout(() => {
             setSelectedIndex(pets.length);
-        });
+        }, 500);
     }, [refetch, pets.length]);
 
     // Show splash screen after adding a pet

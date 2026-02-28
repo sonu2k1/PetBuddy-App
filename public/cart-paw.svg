@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Cart body -->
+  <path d="M10 12h6l8 28h24l6-20H22" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cart wheels -->
+  <circle cx="26" cy="48" r="4" stroke="currentColor" stroke-width="3.5" fill="currentColor"/>
+  <circle cx="46" cy="48" r="4" stroke="currentColor" stroke-width="3.5" fill="currentColor"/>
+  <!-- Paw pad - main pad -->
+  <ellipse cx="36" cy="28" rx="5" ry="4.5" fill="currentColor"/>
+  <!-- Paw pad - top left toe -->
+  <ellipse cx="29" cy="21" rx="2.8" ry="3.2" fill="currentColor" transform="rotate(-15 29 21)"/>
+  <!-- Paw pad - top right toe -->
+  <ellipse cx="43" cy="21" rx="2.8" ry="3.2" fill="currentColor" transform="rotate(15 43 21)"/>
+  <!-- Paw pad - middle left toe -->
+  <ellipse cx="31" cy="18" rx="2.2" ry="2.8" fill="currentColor" transform="rotate(-5 31 18)"/>
+  <!-- Paw pad - middle right toe -->
+  <ellipse cx="41" cy="18" rx="2.2" ry="2.8" fill="currentColor" transform="rotate(5 41 18)"/>
+</svg>

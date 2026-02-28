@@ -15,6 +15,8 @@ import { StoreSection } from "@/components/sections/StoreSection";
 import { BookingSection } from "@/components/sections/BookingSection";
 import { ProductSection } from "@/components/sections/ProductSection";
 import { NotificationsSection } from "@/components/sections/NotificationsSection";
+import { OrderConfirmationSection } from "@/components/sections/OrderConfirmationSection";
+import { TrackOrderSection } from "@/components/sections/TrackOrderSection";
 import { LoginScreen } from "@/components/auth/LoginScreen";
 import { SplashScreen } from "@/components/ui/SplashScreen";
 
@@ -46,6 +48,10 @@ function SectionRenderer() {
       return <ProductSection />;
     case "notifications":
       return <NotificationsSection />;
+    case "order-confirmation":
+      return <OrderConfirmationSection />;
+    case "track-order":
+      return <TrackOrderSection />;
     default:
       return <HomeSection />;
   }

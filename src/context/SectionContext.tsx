@@ -14,7 +14,9 @@ export type SectionType =
     | "store"
     | "booking"
     | "product"
-    | "notifications";
+    | "notifications"
+    | "order-confirmation"
+    | "track-order";
 
 interface SectionContextType {
     activeSection: SectionType;
