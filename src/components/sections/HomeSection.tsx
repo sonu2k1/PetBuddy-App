@@ -555,12 +555,7 @@ export function HomeSection() {
                 </div>
             </main>
 
-            {/* Floating Action Button */}
-            <div className="fixed bottom-24 right-6 z-40 max-w-[430px]">
-                <button className="w-14 h-14 bg-[#F05359] rounded-full flex items-center justify-center shadow-xl shadow-red-300 hover:bg-[#e0484e] transition-colors">
-                    <Plus className="w-6 h-6 text-white" />
-                </button>
-            </div>
+
         </>
     );
 }
