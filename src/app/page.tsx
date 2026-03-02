@@ -19,6 +19,7 @@ import { OrderConfirmationSection } from "@/components/sections/OrderConfirmatio
 import { TrackOrderSection } from "@/components/sections/TrackOrderSection";
 import { LoginScreen } from "@/components/auth/LoginScreen";
 import { SplashScreen } from "@/components/ui/SplashScreen";
+import { InstallAppPrompt } from "@/components/ui/InstallAppPrompt";
 
 function SectionRenderer() {
   const { activeSection } = useSection();
@@ -83,6 +84,7 @@ function AppContent() {
       <MobileContainer>
         <SectionRenderer />
       </MobileContainer>
+      <InstallAppPrompt />
     </SectionProvider>
   );
 }

@@ -365,3 +365,30 @@ body {
   animation: splash-progress-fill ease-in-out both;
   background: linear-gradient(90deg, #F05359 0%, #2BBFB3 50%, #4ECDC4 100%);
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   INSTALL APP PROMPT ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes install-slide-down {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes install-progress {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
+}
