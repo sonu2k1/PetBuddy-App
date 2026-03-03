@@ -103,6 +103,7 @@ function ProductCard({
     onIncrement,
     onDecrement,
     isUpdating,
+    onProductClick,
 }: {
     product: Product & { effectivePrice?: number; inStock?: boolean };
     cartQty: number;
@@ -110,6 +111,7 @@ function ProductCard({
     onIncrement: () => void;
     onDecrement: () => void;
     isUpdating: boolean;
+    onProductClick: () => void;
 }) {
     const effectivePrice = product.effectivePrice ??
         Math.round(product.price * (1 - product.discount / 100));
@@ -118,11 +120,11 @@ function ProductCard({
 
     return (
         <div className={cn(
-            "bg-white border border-gray-100/60 bubble-card overflow-hidden relative flex flex-col",
+            "bg-white border border-gray-100/60 bubble-card overflow-hidden relative flex flex-col cursor-pointer",
             outOfStock && "opacity-70"
         )}>
             {/* Image */}
-            <div className="relative aspect-square bg-gray-50/50 p-3">
+            <div className="relative aspect-square bg-gray-50/50 p-3" onClick={onProductClick}>
                 {/* Stock / Delivery Badge */}
                 {lowStock && (
                     <div className="absolute top-2 left-2 z-10">
@@ -158,7 +160,7 @@ function ProductCard({
             </div>
 
             {/* Info */}
-            <div className="p-3 pt-2 flex flex-col flex-1">
+            <div className="p-3 pt-2 flex flex-col flex-1" onClick={onProductClick}>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                     {product.category}
                 </p>
@@ -323,7 +325,7 @@ function FloatingCartBar({
 //  MAIN STORE SECTION
 // ═══════════════════════════════════════════════════════
 export function StoreSection() {
-    const { setActiveSection } = useSection();
+    const { setActiveSection, navigateToProduct } = useSection();
     const [activeCategory, setActiveCategory] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [updatingProducts, setUpdatingProducts] = useState<Set<string>>(new Set());
@@ -553,6 +555,7 @@ export function StoreSection() {
                                     onIncrement={() => handleIncrement(product._id)}
                                     onDecrement={() => handleDecrement(product._id)}
                                     isUpdating={updatingProducts.has(product._id)}
+                                    onProductClick={() => navigateToProduct(product._id)}
                                 />
                             ))}
                         </div>

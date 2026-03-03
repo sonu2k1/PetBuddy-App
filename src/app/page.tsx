@@ -58,6 +58,20 @@ function SectionRenderer() {
   }
 }
 
+// Sections where the bottom nav should be hidden (they have their own bottom bars)
+const HIDE_NAV_SECTIONS = new Set(["product", "booking", "order-confirmation", "track-order"]);
+
+function AuthenticatedApp() {
+  const { activeSection } = useSection();
+  const hideNav = HIDE_NAV_SECTIONS.has(activeSection);
+
+  return (
+    <MobileContainer hideNav={hideNav}>
+      <SectionRenderer />
+    </MobileContainer>
+  );
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading, justLoggedIn, clearJustLoggedIn } = useAuth();
 
@@ -81,9 +95,7 @@ function AppContent() {
 
   return (
     <SectionProvider>
-      <MobileContainer>
-        <SectionRenderer />
-      </MobileContainer>
+      <AuthenticatedApp />
       <InstallAppPrompt />
     </SectionProvider>
   );

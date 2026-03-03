@@ -35,6 +35,11 @@ self.addEventListener("fetch", (event) => {
     // Skip non-http(s) requests
     if (!event.request.url.startsWith("http")) return;
 
+    // Skip cross-origin requests (e.g. Unsplash, Cloudinary images)
+    // Let the browser handle them natively to avoid CSP connect-src issues
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin) return;
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {

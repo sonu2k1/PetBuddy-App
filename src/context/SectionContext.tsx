@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
 export type SectionType =
     | "home"
@@ -21,15 +21,23 @@ export type SectionType =
 interface SectionContextType {
     activeSection: SectionType;
     setActiveSection: (section: SectionType) => void;
+    selectedProductId: string | null;
+    navigateToProduct: (productId: string) => void;
 }
 
 const SectionContext = createContext<SectionContextType | undefined>(undefined);
 
 export function SectionProvider({ children }: { children: ReactNode }) {
     const [activeSection, setActiveSection] = useState<SectionType>("home");
+    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+    const navigateToProduct = useCallback((productId: string) => {
+        setSelectedProductId(productId);
+        setActiveSection("product");
+    }, []);
 
     return (
-        <SectionContext.Provider value={{ activeSection, setActiveSection }}>
+        <SectionContext.Provider value={{ activeSection, setActiveSection, selectedProductId, navigateToProduct }}>
             {children}
         </SectionContext.Provider>
     );
