@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useProducts, useCart, api, type Product } from "@/hooks/useData";
+import { useProduct, useCart, api, type Product } from "@/hooks/useData";
 import { useSection } from "@/context/SectionContext";
 import {
     ArrowLeft,
@@ -19,83 +19,7 @@ import {
     ShoppingCart,
 } from "lucide-react";
 
-// ═══════════════════════════════════════════════════════
-//  FALLBACK PRODUCTS (same as StoreSection)
-// ═══════════════════════════════════════════════════════
-const FALLBACK_PRODUCTS: Product[] = [
-    {
-        _id: "1",
-        name: "Premium Adult Chicken & Rice",
-        category: "food",
-        price: 489,
-        discount: 12,
-        stock: 2,
-        deliveryTime: "Today, 15m",
-        images: ["https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=300&h=300&fit=crop"],
-        description: "High-quality adult dog food with real chicken",
-        isActive: true,
-    },
-    {
-        _id: "2",
-        name: "Durable Rubber Chew Toy",
-        category: "toys",
-        price: 650,
-        discount: 0,
-        stock: 0,
-        deliveryTime: "Today, 30m",
-        images: ["https://images.unsplash.com/photo-1615266895738-11f1371cd7e5?w=300&h=300&fit=crop"],
-        description: "Tough chew toy for aggressive chewers",
-        isActive: true,
-    },
-    {
-        _id: "3",
-        name: "Savory Salmon Cat Treats",
-        category: "food",
-        price: 185,
-        discount: 15,
-        stock: 45,
-        deliveryTime: "Today, 20m",
-        images: ["https://images.unsplash.com/photo-1615497001839-b0a0eac3274c?w=300&h=300&fit=crop"],
-        description: "Premium salmon-flavored cat treats",
-        isActive: true,
-    },
-    {
-        _id: "4",
-        name: "Oatmeal Pet Shampoo",
-        category: "grooming",
-        price: 245,
-        discount: 10,
-        stock: 30,
-        deliveryTime: "Today, 25m",
-        images: ["https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=300&h=300&fit=crop"],
-        description: "Gentle oatmeal shampoo for sensitive skin",
-        isActive: true,
-    },
-    {
-        _id: "5",
-        name: "Pedigree Dentastix",
-        category: "health",
-        price: 320,
-        discount: 20,
-        stock: 18,
-        deliveryTime: "Today, 15m",
-        images: ["https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300&h=300&fit=crop"],
-        description: "Daily oral care treats for dogs",
-        isActive: true,
-    },
-    {
-        _id: "6",
-        name: "Adjustable Pet Harness",
-        category: "gear",
-        price: 799,
-        discount: 5,
-        stock: 8,
-        deliveryTime: "Tomorrow",
-        images: ["https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=300&h=300&fit=crop"],
-        description: "Comfortable and breathable pet harness",
-        isActive: true,
-    },
-];
+
 
 // Extended product descriptions for the detail view
 const PRODUCT_DETAILS: Record<string, { longDescription: string; features: string[] }> = {
@@ -363,62 +287,84 @@ function CustomerReviews() {
 // ═══════════════════════════════════════════════════════
 export function ProductSection() {
     const { setActiveSection, selectedProductId } = useSection();
-    const { products: apiProducts } = useProducts();
+    const { product: apiProduct, isLoading: isProductLoading } = useProduct(selectedProductId);
     const { cart, refetch: refetchCart } = useCart();
     const [quantity, setQuantity] = useState(1);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
 
-    // Find the product from API or fallbacks
-    const allProducts = apiProducts.length > 0 ? apiProducts : FALLBACK_PRODUCTS;
-    const product = allProducts.find((p) => p._id === selectedProductId) || allProducts[0];
+    const product: Product | null | undefined = apiProduct;
 
     // Calculate prices
-    const effectivePrice = Math.round(product.price * (1 - product.discount / 100));
-    const details = PRODUCT_DETAILS[product._id];
+    const effectivePrice = product ? Math.round(product.price * (1 - product.discount / 100)) : 0;
+    const details = product ? PRODUCT_DETAILS[product._id] : undefined;
 
     // Cart quantity for this product
     const cartQty = useMemo(() => {
-        if (!cart?.items) return 0;
+        if (!cart?.items || !product) return 0;
         const item = cart.items.find((i) => i.productId === product._id);
         return item?.quantity || 0;
-    }, [cart, product._id]);
+    }, [cart, product]);
 
     // ─── Cart Actions ────────────────────────────────────
-    const isValidObjectId = (id: string) => /^[a-f\d]{24}$/i.test(id);
-
     const addToCart = useCallback(async () => {
+        if (!product) return;
         setIsUpdating(true);
+        setAddError(null);
 
-        // Only call API if product has a valid MongoDB ObjectId
-        if (isValidObjectId(product._id)) {
-            try {
-                const currentItems = cart?.items || [];
-                const existingItems = currentItems
-                    .filter((item) => item.productId !== product._id)
-                    .map((item) => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                    }));
+        try {
+            const currentItems = cart?.items || [];
+            const existingItems = currentItems
+                .filter((item) => item.productId !== product._id)
+                .map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                }));
 
-                const newQty = cartQty + quantity;
-                const allItems = [
-                    ...existingItems,
-                    { productId: product._id, quantity: newQty },
-                ];
+            const newQty = cartQty + quantity;
+            const allItems = [
+                ...existingItems,
+                { productId: product._id, quantity: newQty },
+            ];
 
-                await api.post("/cart", { items: allItems });
-            } catch {
-                // silently fail
-            }
+            await api.post("/cart", { items: allItems });
+            refetchCart();
+            // Navigate to checkout only on success
+            setActiveSection("cart");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to add to cart";
+            setAddError(message);
+        } finally {
+            setIsUpdating(false);
         }
-
-        setIsUpdating(false);
-        // Navigate to checkout after cart is updated
-        setActiveSection("cart");
-    }, [cart, product._id, quantity, cartQty, setActiveSection]);
+    }, [cart, product, quantity, cartQty, setActiveSection, refetchCart]);
 
     const decrease = () => setQuantity((q) => Math.max(1, q - 1));
     const increase = () => setQuantity((q) => Math.min(10, q + 1));
+
+    // Show loading while product is being fetched
+    if (isProductLoading && !apiProduct) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-[#F05359] animate-spin" />
+                <p className="text-sm text-gray-400 font-medium">Loading product...</p>
+            </div>
+        );
+    }
+
+    if (!product) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-3 p-4">
+                <p className="text-lg text-gray-600 font-bold">Product Not Found</p>
+                <button
+                    onClick={() => setActiveSection("store")}
+                    className="mt-4 bg-[#F05359] text-white px-6 py-2 rounded-full font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                    Back to Store
+                </button>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -579,6 +525,20 @@ export function ProductSection() {
                     </div>
                 )}
             </main>
+
+            {/* ── Error Toast ─────────────────────────────────── */}
+            {addError && (
+                <div className="fixed top-14 left-4 right-4 max-w-[400px] mx-auto z-[60] bg-red-50 border border-red-200 rounded-2xl p-3 flex items-start gap-2 shadow-lg animate-slide-up">
+                    <span className="text-red-500 text-sm">⚠️</span>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-red-700">Could not add to cart</p>
+                        <p className="text-[11px] text-red-600 mt-0.5">{addError}</p>
+                    </div>
+                    <button onClick={() => setAddError(null)} className="text-red-400 text-xs font-bold">
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* ── Sticky Bottom Bar ─────────────────────────────── */}
             <div

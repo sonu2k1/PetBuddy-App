@@ -59,7 +59,7 @@ function SectionRenderer() {
 }
 
 // Sections where the bottom nav should be hidden (they have their own bottom bars)
-const HIDE_NAV_SECTIONS = new Set(["product", "booking", "order-confirmation", "track-order"]);
+const HIDE_NAV_SECTIONS = new Set(["product", "booking", "cart", "order-confirmation", "track-order"]);
 
 function AuthenticatedApp() {
   const { activeSection } = useSection();

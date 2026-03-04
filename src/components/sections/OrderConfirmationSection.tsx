@@ -5,16 +5,11 @@ import { useSection } from "@/context/SectionContext";
 import { useCart } from "@/hooks/useData";
 import { useMemo } from "react";
 
-const FALLBACK_ITEMS = [
-    { productId: "1", name: "Premium Puppy Kibble", price: 850, quantity: 1 },
-    { productId: "2", name: "Squeaky Rubber Bone", price: 390, quantity: 2 },
-];
-
 export function OrderConfirmationSection() {
     const { setActiveSection } = useSection();
     const { cart } = useCart();
 
-    const items = cart?.items && cart.items.length > 0 ? cart.items : FALLBACK_ITEMS;
+    const items = cart?.items ?? [];
     const totalPaid = useMemo(() => {
         const subtotal = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
         return subtotal + 10; // +₹10 impact contribution

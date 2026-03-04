@@ -18,80 +18,7 @@ const CATEGORIES = [
     { id: "gear", label: "Gear", emoji: "🎒" },
 ];
 
-const FALLBACK_PRODUCTS: Product[] = [
-    {
-        _id: "1",
-        name: "Premium Adult Chicken & Rice",
-        category: "food",
-        price: 489,
-        discount: 12,
-        stock: 2,
-        deliveryTime: "Today, 15m",
-        images: ["https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=300&h=300&fit=crop"],
-        description: "High-quality adult dog food with real chicken",
-        isActive: true,
-    },
-    {
-        _id: "2",
-        name: "Durable Rubber Chew Toy",
-        category: "toys",
-        price: 650,
-        discount: 0,
-        stock: 0,
-        deliveryTime: "Today, 30m",
-        images: ["https://images.unsplash.com/photo-1615266895738-11f1371cd7e5?w=300&h=300&fit=crop"],
-        description: "Tough chew toy for aggressive chewers",
-        isActive: true,
-    },
-    {
-        _id: "3",
-        name: "Savory Salmon Cat Treats",
-        category: "food",
-        price: 185,
-        discount: 15,
-        stock: 45,
-        deliveryTime: "Today, 20m",
-        images: ["https://images.unsplash.com/photo-1615497001839-b0a0eac3274c?w=300&h=300&fit=crop"],
-        description: "Premium salmon-flavored cat treats",
-        isActive: true,
-    },
-    {
-        _id: "4",
-        name: "Oatmeal Pet Shampoo",
-        category: "grooming",
-        price: 245,
-        discount: 10,
-        stock: 30,
-        deliveryTime: "Today, 25m",
-        images: ["https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=300&h=300&fit=crop"],
-        description: "Gentle oatmeal shampoo for sensitive skin",
-        isActive: true,
-    },
-    {
-        _id: "5",
-        name: "Pedigree Dentastix",
-        category: "health",
-        price: 320,
-        discount: 20,
-        stock: 18,
-        deliveryTime: "Today, 15m",
-        images: ["https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300&h=300&fit=crop"],
-        description: "Daily oral care treats for dogs",
-        isActive: true,
-    },
-    {
-        _id: "6",
-        name: "Adjustable Pet Harness",
-        category: "gear",
-        price: 799,
-        discount: 5,
-        stock: 8,
-        deliveryTime: "Tomorrow",
-        images: ["https://images.unsplash.com/photo-1591946614720-90a587da4a36?w=300&h=300&fit=crop"],
-        description: "Comfortable and breathable pet harness",
-        isActive: true,
-    },
-];
+
 
 // ═══════════════════════════════════════════════════════
 //  PRODUCT CARD
@@ -190,7 +117,7 @@ function ProductCard({
                         <div>
                             {cartQty === 0 ? (
                                 <button
-                                    onClick={onAdd}
+                                    onClick={(e) => { e.stopPropagation(); onAdd(); }}
                                     disabled={isUpdating}
                                     className="w-8 h-8 bg-[#F05359] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-200 active:scale-90 transition-all disabled:opacity-50"
                                 >
@@ -203,7 +130,7 @@ function ProductCard({
                             ) : (
                                 <div className="flex items-center gap-0 bg-[#F05359] rounded-full shadow-lg shadow-red-200">
                                     <button
-                                        onClick={onDecrement}
+                                        onClick={(e) => { e.stopPropagation(); onDecrement(); }}
                                         disabled={isUpdating}
                                         className="w-7 h-7 flex items-center justify-center text-white active:scale-90 transition-all disabled:opacity-50"
                                     >
@@ -217,7 +144,7 @@ function ProductCard({
                                         )}
                                     </span>
                                     <button
-                                        onClick={onIncrement}
+                                        onClick={(e) => { e.stopPropagation(); onIncrement(); }}
                                         disabled={isUpdating}
                                         className="w-7 h-7 flex items-center justify-center text-white active:scale-90 transition-all disabled:opacity-50"
                                     >
@@ -335,16 +262,11 @@ export function StoreSection() {
     const { products: apiProducts, isLoading } = useProducts(categoryFilter);
     const { cart, refetch: refetchCart } = useCart();
 
-    const products = apiProducts.length > 0 ? apiProducts : FALLBACK_PRODUCTS;
+    const products = apiProducts;
 
-    // Filter by search & category (for fallback)
+    // Filter by search & category
     const filteredProducts = useMemo(() => {
         let filtered = products;
-        if (activeCategory !== "all" && apiProducts.length === 0) {
-            filtered = filtered.filter(
-                (p) => p.category.toLowerCase() === activeCategory.toLowerCase()
-            );
-        }
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(
@@ -355,7 +277,7 @@ export function StoreSection() {
             );
         }
         return filtered;
-    }, [products, activeCategory, searchQuery, apiProducts.length]);
+    }, [products, searchQuery]);
 
     // Build cart quantity map
     const cartQtyMap = useMemo(() => {
@@ -522,7 +444,10 @@ export function StoreSection() {
                         <h2 className="text-lg font-black text-gray-900">
                             Daily Essentials
                         </h2>
-                        <button className="text-[#F05359] text-xs font-bold hover:underline">
+                        <button
+                            onClick={() => setActiveCategory("all")}
+                            className="text-[#F05359] text-xs font-bold hover:underline"
+                        >
                             View all
                         </button>
                     </div>
@@ -597,6 +522,7 @@ export function StoreSection() {
                         ].map((service) => (
                             <button
                                 key={service.label}
+                                onClick={() => setActiveSection("booking")}
                                 className="bg-white border border-gray-100/60 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:border-[#F05359]/30 transition-all active:scale-95 bubble-card"
                             >
                                 <span className="text-2xl">{service.emoji}</span>

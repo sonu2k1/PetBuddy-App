@@ -1,31 +1,10 @@
 "use client";
 
 import { ArrowLeft, Minus, Plus, Loader2, ShoppingCart, Heart, CreditCard, Banknote, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useSection } from "@/context/SectionContext";
 import { useCart, api } from "@/hooks/useData";
-
-const FALLBACK_ITEMS = [
-    {
-        productId: "1",
-        name: "Pedigree Dog Food",
-        description: "3kg Pack",
-        price: 850,
-        discount: 0,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=200&h=200&fit=crop",
-    },
-    {
-        productId: "2",
-        name: "Rubber Squeaky Toy",
-        description: "Blue • Medium",
-        price: 249,
-        discount: 0,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1615266895738-11f1371cd7e5?w=200&h=200&fit=crop",
-    }
-];
 
 type PaymentMethod = "upi" | "card" | "cod";
 
@@ -33,10 +12,16 @@ export function CartSection() {
     const { setActiveSection } = useSection();
     const { cart, isLoading, refetch } = useCart();
     const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>("upi");
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [orderError, setOrderError] = useState<string | null>(null);
 
-    const items = cart?.items && cart.items.length > 0 ? cart.items : FALLBACK_ITEMS;
+    const items = cart?.items ?? [];
     const totalItems = items.reduce((acc, i) => acc + i.quantity, 0);
-    const subtotal = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    // Use discounted/effective price for subtotal
+    const subtotal = items.reduce((acc, i) => {
+        const effectivePrice = Math.round(i.price * (1 - (i.discount || 0) / 100));
+        return acc + effectivePrice * i.quantity;
+    }, 0);
     const deliveryFee = 0;
     const impactContribution = 10;
     const grandTotal = subtotal + deliveryFee + impactContribution;
@@ -63,6 +48,36 @@ export function CartSection() {
             // silently fail
         }
     };
+
+    // ─── Place Order ────────────────────────────────────
+    const placeOrder = useCallback(async () => {
+        if (isPlacingOrder) return;
+        setIsPlacingOrder(true);
+        setOrderError(null);
+
+        try {
+            await api.post("/orders", {
+                deliveryAddress: {
+                    fullName: "User",
+                    phone: "9876543210",
+                    line1: "12/456, Civil Lines",
+                    line2: "Near Green Park Stadium",
+                    city: "Kanpur",
+                    state: "Uttar Pradesh",
+                    pincode: "208001",
+                },
+            });
+            // Refetch cart to clear it locally
+            refetch();
+            // Navigate to order confirmation
+            setActiveSection("order-confirmation");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to place order. Please try again.";
+            setOrderError(message);
+        } finally {
+            setIsPlacingOrder(false);
+        }
+    }, [isPlacingOrder, refetch, setActiveSection]);
 
     const paymentMethods = [
         { id: "upi" as PaymentMethod, label: "UPI", icon: <Smartphone className="w-5 h-5" /> },
@@ -169,7 +184,7 @@ export function CartSection() {
                                                 {(item as any).description || item.name}
                                             </p>
                                         </div>
-                                        <span className="font-bold text-[#F05359] text-sm">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="font-bold text-[#F05359] text-sm">₹{(Math.round(item.price * (1 - (item.discount || 0) / 100)) * item.quantity).toFixed(2)}</span>
                                     </div>
 
                                     {/* Quantity Controls */}
@@ -260,14 +275,43 @@ export function CartSection() {
                 </section>
             </main>
 
+            {/* ── Order Error Toast ──────────────────────────── */}
+            {orderError && (
+                <div className="fixed top-4 left-4 right-4 max-w-[400px] mx-auto z-[60] bg-red-50 border border-red-200 rounded-2xl p-3 flex items-start gap-2 shadow-lg animate-slide-up">
+                    <span className="text-red-500 text-sm">⚠️</span>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-red-700">Order Failed</p>
+                        <p className="text-[11px] text-red-600 mt-0.5">{orderError}</p>
+                    </div>
+                    <button onClick={() => setOrderError(null)} className="text-red-400 text-xs font-bold">
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {/* ── Place Order Button ──────────────────────────── */}
-            <div className="fixed bottom-[72px] left-0 right-0 max-w-[430px] mx-auto p-4 bg-gradient-to-t from-white via-white to-white/80 z-40">
+            <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-4 bg-gradient-to-t from-white via-white to-white/80 z-40">
                 <button
-                    onClick={() => setActiveSection("order-confirmation")}
-                    className="w-full bg-[#F05359] text-white h-14 rounded-full font-black text-base shadow-xl shadow-red-200/50 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+                    onClick={placeOrder}
+                    disabled={isPlacingOrder || totalItems === 0}
+                    className={cn(
+                        "w-full text-white h-14 rounded-full font-black text-base shadow-xl shadow-red-200/50 active:scale-[0.97] transition-all flex items-center justify-center gap-2",
+                        isPlacingOrder || totalItems === 0
+                            ? "bg-gray-300 shadow-none cursor-not-allowed"
+                            : "bg-[#F05359]"
+                    )}
                 >
-                    Place Order
-                    <span className="text-lg">🐾</span>
+                    {isPlacingOrder ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Placing Order...
+                        </>
+                    ) : (
+                        <>
+                            Place Order • ₹{grandTotal.toFixed(0)}
+                            <span className="text-lg">🐾</span>
+                        </>
+                    )}
                 </button>
             </div>
         </>

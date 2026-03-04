@@ -110,6 +110,13 @@ export function useProducts(category?: string) {
     return { products: data?.products ?? [], pagination: data?.pagination, error, isLoading, refetch };
 }
 
+export function useProduct(productId: string | null) {
+    const { data, error, isLoading, refetch } = useFetch<Product>(
+        productId ? `/products/${productId}` : null
+    );
+    return { product: data, error, isLoading, refetch };
+}
+
 // ═══════════════════════════════════════════════════════
 //  REMINDERS
 // ═══════════════════════════════════════════════════════
